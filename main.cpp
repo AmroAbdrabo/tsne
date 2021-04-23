@@ -27,7 +27,6 @@ int main(int argc, char** argv) {
     for(int i = 0; i < N * out_dim; i++)    uY[i] =  .0;
     for(int i = 0; i < N * out_dim; i++) gains[i] = 1.0;
     for(int i = 0; i < N * out_dim; i++)     Y[i] = randn() * .0001;
-    std::cout << Y[3] << std::endl;
 
     load_data(X);
 
@@ -56,7 +55,7 @@ int main(int argc, char** argv) {
             printf("Iteration %d: error is %f \n", iter, C);
         }
     }
-    std::cout << Y[3] << std::endl;
+    //std::cout << Y[3] << std::endl;
 
     for(int i = 0; i < N * N; i++)  P[i] /= 12.0;
 
@@ -69,7 +68,7 @@ int main(int argc, char** argv) {
             printf("Iteration %d: error is %f \n", iter, C);
         }
     }
-    std::cout << Y[3] << std::endl;
+    //std::cout << Y[3] << std::endl;
 
 
     save_data(Y);

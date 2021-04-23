@@ -3,6 +3,11 @@
 #include "test_zeromean.hpp"
 #include "test_computegp.hpp"
 
+/// plug in your implementation using corresponding namespaces
+using namespace computeGPv1;
+using namespace upgradeGradientv1;
+using namespace zeroMeanv1;
+
 void usage() {
     cout << "[Usage] ./test <kernel_name1> <kernel_name2> ...\n";
     cout << "Valid kernel names : computegp/updgradient/zeromean\n";
@@ -20,13 +25,13 @@ int main(int argc, char** argv) {
         string to_test(argv[i]);
         cout << "Begin Test " << to_test << endl;
         if(to_test == "computegp") {
-            test = new Test_ComputeGP(computeGPv1::computeGaussianPerplexity);
+            test = new Test_ComputeGP(computeGaussianPerplexity);
         }
         else if(to_test == "updgradient") {
-            test = new Test_UpdGradient(upgradeGradientv1::upgradeGradient);
+            test = new Test_UpdGradient(upgradeGradient);
         }
         else if(to_test == "zeromean") {
-            test = new Test_ZeroMean(zeroMeanv1::zeroMean);
+            test = new Test_ZeroMean(zeroMean);
         }
         else {
             cout << "Invalid kernel name!\n";

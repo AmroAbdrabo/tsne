@@ -15,11 +15,3 @@ init:
 
 .PHONY: init
 
-# test_computegp: kernel_test.cpp
-# 	$(CXX) -o $@ $< $(CXXFLAGS) -DTEST_COMPUTEGP
-
-# test_updgradient: kernel_test.cpp
-# 	$(CXX) -o $@ $< $(CXXFLAGS) -DTEST_UPDGRADIENT
-
-# test_zeromean: kernel_test.cpp
-# 	$(CXX) -o $@ $< $(CXXFLAGS) -DTEST_ZEROMEAN

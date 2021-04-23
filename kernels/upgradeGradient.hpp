@@ -1,9 +1,25 @@
 #pragma once
 #include "computeSED.hpp"
 
+/// return the sign of the a double, 0 if x = 0, x/abs(x) otherwise
 static inline double sign(double x) { return (x == .0 ? .0 : (x < .0 ? -1.0 : 1.0)); }
 
+/**
+ * compute the gradient and update the output data for each iteration
+ * @param P N*N symmetric matrix, P[i][j] is the distance between X[i] and X[j]
+ * @param Y output data whose dim=N*out_dim, row major order
+ * @param N number of data
+ * @param out_dim dimension of output data
+ * @param dY gradient of this iteration, dim=N*out_dim
+ * @param uY decaying history gradient, dim=N*out_dim
+ * @param gains dim=N*out_dim
+ * @param momentum the coefficient of the momentum term
+ * @param eta learning rate
+ */
+
 namespace upgradeGradientv1 {
+    using namespace computeSEDv1;
+    
     inline void upgradeGradient(const double* P, double* Y, int N, int out_dim, double* dY, 
                                 double* uY, double* gains, const int momentum, const int eta) {
         // Make sure the current gradient contains zeros

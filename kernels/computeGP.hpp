@@ -1,9 +1,20 @@
 #pragma once
 #include "computeSED.hpp"
 #include <cfloat>
-// compute Gaussian perplexity and symmetrize the matrix
+
+/**
+ * compute variance for each input data point, calculate pairwise distances, and symmetrize the matrix
+ *
+ * @param X input data whose dim = N*in_dim, stored in row major order
+ * @param N number of input data points
+ * @param in_dim input data dimension
+ * @param P out-parameter for storing the pairwise distance, symmetric, dim=N*N
+ * @param perp user-defined perplexity to determine the optimal variance
+ */
 
 namespace computeGPv1 {
+    using namespace computeSEDv1;
+    
     inline void computeGaussianPerplexity(const double* X, const int N, const int in_dim, double* P, const double perp) {
         // Compute the squared Euclidean distance matrix
         double* DD = (double*) malloc(N * N * sizeof(double));

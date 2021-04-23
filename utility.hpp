@@ -62,7 +62,7 @@ double evaluateError(double* P, double* Y, int N, int D) {
     double* DD = (double*) malloc(N * N * sizeof(double));
     double* Q = (double*) malloc(N * N * sizeof(double));
     if(DD == NULL || Q == NULL) { printf("Memory allocation failed!\n"); exit(1); }
-    computeSquaredEuclideanDistance(Y, N, D, DD);
+    computeSEDv1::computeSquaredEuclideanDistance(Y, N, D, DD);
 
     // Compute Q-matrix and normalization sum
     int nN = 0;

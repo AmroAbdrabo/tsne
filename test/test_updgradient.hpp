@@ -93,7 +93,7 @@ public:
         double error = .0;
 
         (*func)(P, Y, N, out_dim, dY, uY, gains, momentum, eta);
-        upgradeGradientv1::upgradeGradient(P, baseY, N, out_dim, basedY, baseuY, basegains, momentum, eta);
+        updateGradientv1::updateGradient(P, baseY, N, out_dim, basedY, baseuY, basegains, momentum, eta);
         error = (nrm_sqr_diff(Y, baseY, N * out_dim) + nrm_sqr_diff(dY, basedY, N * out_dim) + 
                 nrm_sqr_diff(uY, baseuY, N * out_dim) + nrm_sqr_diff(gains, basegains, N * out_dim)) / 4;
         

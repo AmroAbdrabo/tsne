@@ -2,15 +2,17 @@
 #include "test_updgradient.hpp"
 #include "test_zeromean.hpp"
 #include "test_computegp.hpp"
+#include "test_computesed.hpp"
 
 /// plug in your implementation using corresponding namespaces
 using namespace computeGPv1;
-using namespace upgradeGradientv1;
+using namespace updateGradientv1;
 using namespace zeroMeanv1;
+using namespace computeSEDv2;
 
 void usage() {
     cout << "[Usage] ./test <kernel_name1> <kernel_name2> ...\n";
-    cout << "Valid kernel names : computegp/updgradient/zeromean\n";
+    cout << "Valid kernel names : computegp/updgradient/zeromean/computesed\n";
 }
 
 int main(int argc, char** argv) {
@@ -28,16 +30,20 @@ int main(int argc, char** argv) {
             test = new Test_ComputeGP(computeGaussianPerplexity);
         }
         else if(to_test == "updgradient") {
-            test = new Test_UpdGradient(upgradeGradient);
+            test = new Test_UpdGradient(updateGradient);
         }
         else if(to_test == "zeromean") {
             test = new Test_ZeroMean(zeroMean);
+        }
+        else if(to_test == "computesed") {
+            test = new Test_ComputeSED(computeSquaredEuclideanDistance);
         }
         else {
             cout << "Invalid kernel name!\n";
             usage();
             exit(1);
         }
+
         test->validate();
         test->perf_test();
         free(test);

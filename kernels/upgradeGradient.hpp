@@ -17,10 +17,9 @@ static inline double sign(double x) { return (x == .0 ? .0 : (x < .0 ? -1.0 : 1.
  * @param eta learning rate
  */
 
-namespace upgradeGradientv1 {
-    using namespace computeSEDv1;
+namespace updateGradientv1 {
     
-    inline void upgradeGradient(const double* P, double* Y, int N, int out_dim, double* dY, 
+    inline void updateGradient(const double* P, double* Y, int N, int out_dim, double* dY, 
                                 double* uY, double* gains, const int momentum, const int eta) {
         // Make sure the current gradient contains zeros
         for(int i = 0; i < N * out_dim; i++) dY[i] = 0.0;
@@ -28,7 +27,7 @@ namespace upgradeGradientv1 {
         // Compute the squared Euclidean distance matrix
         double* DD = (double*) malloc(N * N * sizeof(double));
         if(DD == NULL) { printf("Memory allocation failed!\n"); exit(1); }
-        computeSquaredEuclideanDistance(Y, N, out_dim, DD);
+        computeSEDv1::computeSquaredEuclideanDistance(Y, N, out_dim, DD);
 
         // Compute Q-matrix and normalization sum
         double* Q    = (double*) malloc(N * N * sizeof(double));

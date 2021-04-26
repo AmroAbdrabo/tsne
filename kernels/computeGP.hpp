@@ -13,13 +13,12 @@
  */
 
 namespace computeGPv1 {
-    using namespace computeSEDv1;
     
     inline void computeGaussianPerplexity(const double* X, const int N, const int in_dim, double* P, const double perp) {
         // Compute the squared Euclidean distance matrix
         double* DD = (double*) malloc(N * N * sizeof(double));
         if(DD == NULL) { printf("Memory allocation failed!\n"); exit(1); }
-        computeSquaredEuclideanDistance(X, N, in_dim, DD);
+        computeSEDv1::computeSquaredEuclideanDistance(X, N, in_dim, DD);
 
         // Compute the Gaussian kernel row by row
         int nN = 0;

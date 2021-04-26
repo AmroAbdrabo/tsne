@@ -28,28 +28,36 @@ namespace computeSEDv1{
     }
 }
 
-/*
+
 namespace computeSEDv2{ // with blocking
-    void computeSquaredEuclideanDistance(const double* X, int N, int D, 
-            double* DD) {
-       const double* XnD = X; 
-       int b = 16; // block size
+    void computeSquaredEuclideanDistance(const double* X, int N, int D, double* DD) {
+       const int b = 8; // block size
 
        for(int i = 0; i < N; i += b) {
            for(int j = i; j < N; j += b) {
                for(int ii = i; ii < i + b; ii++) {
-                   const double* Xii = X + ii*N;
+                   const double* Xii = X + ii*D;
                    for(int jj = j; jj < j + b; jj++) {
                        // compute distance
-                       const double* Xjj = X + jj*N;
-                       double dist = 0;
-                       for(int d = 0; d < D; d++) { dist += (Xii[d]-Xjj[d]) * (Xii[d]-Xjj[d]); }
-                       DD[ii*N + j] = dist;
-                       DD[jj*N + i] = dist;
+                       if(ii == jj) {
+                           DD[ii*N + jj] = 0.0;
+                           continue;
+                       }
+                       
+                       const double* Xjj = X + jj*D;
+                       double dist = 0.0;
+
+                       for(int d = 0; d < D; d++) {
+                           double tmp = Xii[d] - Xjj[d];
+                           dist += tmp * tmp;
+                       }
+                       
+                       DD[ii*N + jj] = dist;
+                       DD[jj*N + ii] = dist;
                    }
                }
            }
        }
     }
 }
-*/
+

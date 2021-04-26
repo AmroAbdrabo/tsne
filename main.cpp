@@ -10,7 +10,7 @@
 #include "utility.hpp"
 
 using namespace computeGPv1;
-using namespace upgradeGradientv1;
+using namespace updateGradientv1;
 using namespace zeroMeanv1;
 
 int main(int argc, char** argv) {
@@ -45,9 +45,8 @@ int main(int argc, char** argv) {
     for(int i = 0; i < N * N; i++) P[i] *= 12.0;
 
     // Training
-    std::cout << Y[3] << std::endl;
     for(int iter = 0; iter < first_phase_iter; iter++) {
-        upgradeGradient(P, Y, N, out_dim, dY, uY, gains, momentum, eta); // compute gradient and upgrade
+        updateGradient(P, Y, N, out_dim, dY, uY, gains, momentum, eta); // compute gradient and upgrade
         zeroMean(Y, N, out_dim);
         if (iter > 0 && (iter % 50 == 0 || iter == max_iter - 1)) {
             double C = .0;
@@ -60,7 +59,7 @@ int main(int argc, char** argv) {
     for(int i = 0; i < N * N; i++)  P[i] /= 12.0;
 
     for(int iter = 0; iter < second_phase_iter; iter++) {
-        upgradeGradient(P, Y, N, out_dim, dY, uY, gains, final_momentum, eta);
+        updateGradient(P, Y, N, out_dim, dY, uY, gains, final_momentum, eta);
         zeroMean(Y, N, out_dim);
         if (iter > 0 && (iter % 50 == 0 || iter == max_iter - 1)) {
             double C = .0;

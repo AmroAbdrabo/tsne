@@ -10,6 +10,7 @@ private:
     typedef void(*comp_func)(const double*, int, int, double*);
     comp_func func;
     int perf_test_N = 128;
+    int perf_in_dim = 2;
     double DD[N * N] __attribute__ ((aligned (32)));
     double baseDD[N * N] __attribute__ ((aligned (32)));
 
@@ -37,7 +38,7 @@ public:
             num_runs = num_runs * multiplier;
             start = start_tsc();
             for (size_t i = 0; i < num_runs; i++) {
-                (*func)(X, perf_test_N, in_dim, DD);      
+                (*func)(X, perf_test_N, perf_in_dim, DD);      
             }
             end = stop_tsc(start);
 
@@ -50,7 +51,7 @@ public:
         for (size_t j = 0; j < REP; j++) {
             start = start_tsc();
             for (size_t i = 0; i < num_runs; ++i) {
-                (*func)(X, perf_test_N, in_dim, DD);      
+                (*func)(X, perf_test_N, perf_in_dim, DD);      
             }
             end = stop_tsc(start);
 
@@ -66,8 +67,8 @@ public:
         init_validate();
         double error = .0;
 
-        (*func)(X, N, in_dim, DD);
-        computeSEDv1::computeSquaredEuclideanDistance(X, N, in_dim, baseDD);
+        (*func)(X, N, perf_in_dim, DD);
+        computeSEDv1::computeSquaredEuclideanDistance(X, N, perf_in_dim, baseDD);
         error = nrm_sqr_diff(DD, baseDD, N * N);
         
         print_error(error);
@@ -76,6 +77,7 @@ public:
     virtual void print_perf(double cycles, long num_runs) {
         cout << "\nPerformance Test Report\n";
         cout << "Number of samples = \t" << perf_test_N << endl;
+        cout << "Number of dimension = \t" << perf_in_dim << endl;
         cout << "Repeat " << num_runs << " runs for " << REP << " times.\n";
         cout << "Avg cycles = " << cycles << endl; 
         cout << endl; 

@@ -3,7 +3,7 @@
 // Input and output dimensions
 constexpr int in_dim  = 16; // input dimension
 constexpr int out_dim = 2; // map dimension
-constexpr int N  = 1000; // number of input data
+constexpr int N  = 1024; // number of input data
 
 // Tunable parameters
 constexpr double perp = 30.0; // perplexity = 2^H(P)

@@ -37,9 +37,9 @@ namespace computeSEDv2d2{ // with blocking
     void computeSquaredEuclideanDistance(const double* X, int N, int D, double* DD) {
        const int b = 16; // block size for cache
 
-       for(int i = 0; i < N; i += b) {
+       for(int i = 0; i < N - b + 1; i += b) {
            const double* Xi = X + i * D;
-           for(int j = i; j < N; j += b) {
+           for(int j = i; j < N - b + 1; j += b) {
                const double* Xii = Xi;
                const double* Xj = X + j * D;
                for(int ii = i; ii < i + b; ii++, Xii += D) {
@@ -73,11 +73,11 @@ namespace computeSEDv2d2ru{ // with blocking for cache AND register w unrolling
        const int rbj = 16; // block size for registers
 
         const double* Xi = X;
-        for(int i = 0; i < N; i += b, Xi += b * D) {
+        for(int i = 0; i < N - b + 1; i += b, Xi += b * D) {
             const double* Xj = X + i * D;
-            for(int j = i; j < N; j += b, Xj += b * D) {
+            for(int j = i; j < N - b + 1; j += b, Xj += b * D) {
                 const double* Xii = Xi;
-                for(int ii = i; ii < i + b; ii += rbi, Xii += rbi * D) {
+                for(int ii = i; ii < i + b - rbi + 1; ii += rbi, Xii += rbi * D) {
                     const double* Xjj = Xj;
 
                     // stay in registers for reuse
@@ -144,11 +144,11 @@ namespace computeSEDv2d2ruvec{ // with blocking for cache AND register w unrolli
        const int rbj = 16; // block size for registers
 
         const double* Xi = X;
-        for(int i = 0; i < N; i += b, Xi += b * D) {
+        for(int i = 0; i < N - b + 1; i += b, Xi += b * D) {
             const double* Xj = X + i * D;
-            for(int j = i; j < N; j += b, Xj += b * D) {
+            for(int j = i; j < N - b + 1; j += b, Xj += b * D) {
                 const double* Xii = Xi;
-                for(int ii = i; ii < i + b; ii += rbi, Xii += rbi * D) {
+                for(int ii = i; ii < i + b - rbi + 1; ii += rbi, Xii += rbi * D) {
                     const double* Xjj = Xj;
                     
                     d256 x01 = _mm256_load_pd(Xii);
@@ -195,9 +195,9 @@ namespace computeSEDv2dx{ // with blocking, any dimension
     void computeSquaredEuclideanDistance(const double* X, int N, int D, double* DD) {
        const int b = 16; // block size
 
-       for(int i = 0; i < N; i += b) {
+       for(int i = 0; i < N - b + 1; i += b) {
            const double* Xi = X + i * D;
-           for(int j = i; j < N; j += b) {
+           for(int j = i; j < N - b + 1; j += b) {
                const double* Xii = Xi;
                const double* Xj = X + j * D;
                for(int ii = i; ii < i + b; ii++, Xii += D) {
@@ -233,13 +233,13 @@ namespace computeSEDv2d2r{ // with blocking for cache AND register wo unrolling
        const int rbj = 16; // block size for registers
 
         const double* Xi = X;
-        for(int i = 0; i < N; i += b, Xi += b * D) {
+        for(int i = 0; i < N - b + 1; i += b, Xi += b * D) {
             const double* Xj = X + i * D;
-            for(int j = i; j < N; j += b, Xj += b * D) {
+            for(int j = i; j < N - b + 1; j += b, Xj += b * D) {
                 const double* Xii = Xi;
-                for(int ii = i; ii < i + b; ii += rbi, Xii += rbi * D) {
+                for(int ii = i; ii < i + b - rbi + 1; ii += rbi, Xii += rbi * D) {
                     const double* Xjj = Xj;
-                    for(int jj = j; jj < j + b; jj += rbj, Xjj += rbj * D) {
+                    for(int jj = j; jj < j + b - rbj + 1; jj += rbj, Xjj += rbj * D) {
                         const double* Xri = Xii;
                         for(int ri = ii; ri < ii + rbi; ri++, Xri += D) {
                             const double* Xrj = Xjj;
@@ -271,17 +271,17 @@ namespace computeSEDv2d2ru_depr{ // with blocking for cache AND register w unrol
        const int rbj = 16; // block size for registers
 
         const double* Xi = X;
-        for(int i = 0; i < N; i += b, Xi += b * D) {
+        for(int i = 0; i < N - b + 1; i += b, Xi += b * D) {
             const double* Xj = X + i * D;
-            for(int j = i; j < N; j += b, Xj += b * D) {
+            for(int j = i; j < N - b + 1; j += b, Xj += b * D) {
                 const double* Xii = Xi;
-                for(int ii = i; ii < i + b; ii += rbi, Xii += rbi * D) {
+                for(int ii = i; ii < i + b - rbi + 1; ii += rbi, Xii += rbi * D) {
                     const double* Xjj = Xj;
                     double x0d0 = Xii[0], x0d1 = Xii[1];
                     double x1d0 = Xii[2], x1d1 = Xii[3];
                     double x2d0 = Xii[4], x2d1 = Xii[5];
                     double x3d0 = Xii[6], x3d1 = Xii[7];
-                    for(int jj = j; jj < j + b; jj += rbj, Xjj += rbj * D) {
+                    for(int jj = j; jj < j + b - rbj + 1; jj += rbj, Xjj += rbj * D) {
                         const double* Xrj = Xjj;
                         for(int rj = jj; rj < jj + rbj; rj++, Xrj += D) {
                             

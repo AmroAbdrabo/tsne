@@ -6,24 +6,24 @@
 class Test_ComputeSED : public Test
 {
 private:
-    double X[N * in_dim] __attribute__ ((aligned (32)));
+    static const int perf_test_N = 256;
+    static const int perf_in_dim = 2;
+    double X[perf_test_N * perf_in_dim] __attribute__ ((aligned (32)));
     typedef void(*comp_func)(const double*, int, int, double*);
     comp_func func;
-    int perf_test_N = 128;
-    int perf_in_dim = 2;
-    double DD[N * N] __attribute__ ((aligned (32)));
-    double baseDD[N * N] __attribute__ ((aligned (32)));
+    double DD[perf_test_N * perf_test_N] __attribute__ ((aligned (32)));
+    double baseDD[perf_test_N * perf_test_N] __attribute__ ((aligned (32)));
 
 public:
     Test_ComputeSED(comp_func fn) : func(fn) {}
     ~Test_ComputeSED() = default;
     
     virtual void init_perf() {    
-        rands(X, N, in_dim);
+        rands(X, perf_test_N, perf_in_dim);
     }
 
     virtual void init_validate() {
-        rands(X, N, in_dim);
+        rands(X, perf_test_N, perf_in_dim);
     }
 
 
@@ -67,9 +67,9 @@ public:
         init_validate();
         double error = .0;
 
-        (*func)(X, N, perf_in_dim, DD);
-        computeSEDv1::computeSquaredEuclideanDistance(X, N, perf_in_dim, baseDD);
-        error = nrm_sqr_diff(DD, baseDD, N * N);
+        (*func)(X, perf_test_N, perf_in_dim, DD);
+        computeSEDv1::computeSquaredEuclideanDistance(X, perf_test_N, perf_in_dim, baseDD);
+        error = nrm_sqr_diff(DD, baseDD, perf_test_N * perf_test_N);
         
         print_error(error);
     }

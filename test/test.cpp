@@ -8,7 +8,7 @@
 using namespace computeGPv1;
 using namespace updateGradientv1;
 using namespace zeroMeanv1;
-using namespace computeSEDv2d2ru;
+using namespace computeSEDv2d2ruvec;
 // using namespace computeSEDv1;
 
 void usage() {

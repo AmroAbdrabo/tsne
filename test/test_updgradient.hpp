@@ -10,15 +10,35 @@ private:
     double momentum = .5;
     double eta = 200;
     int perf_test_N = 256;
-    double P[N * N]             __attribute__ ((aligned (32)));
-    double Y[N * out_dim]       __attribute__ ((aligned (32)));
-    double dY[N * out_dim]      __attribute__ ((aligned (32)));
-    double uY[N * out_dim]      __attribute__ ((aligned (32)));
-    double gains[N * out_dim]         __attribute__ ((aligned (32)));
-    double baseY[N * out_dim]         __attribute__ ((aligned (32)));
-    double basedY[N * out_dim]        __attribute__ ((aligned (32)));
-    double baseuY[N * out_dim]        __attribute__ ((aligned (32)));
-    double basegains[N * out_dim]     __attribute__ ((aligned (32)));
+    // double P[N * N]             __attribute__ ((aligned (32)));
+    // double Y[N * out_dim]       __attribute__ ((aligned (32)));
+    // double dY[N * out_dim]      __attribute__ ((aligned (32)));
+    // double uY[N * out_dim]      __attribute__ ((aligned (32)));
+    // double gains[N * out_dim]         __attribute__ ((aligned (32)));
+    // double baseY[N * out_dim]         __attribute__ ((aligned (32)));
+    // double basedY[N * out_dim]        __attribute__ ((aligned (32)));
+    // double baseuY[N * out_dim]        __attribute__ ((aligned (32)));
+    // double basegains[N * out_dim]     __attribute__ ((aligned (32)));  
+
+    // alignas(double) double P[N * N];             
+    // alignas(double) double Y[N * out_dim];       
+    // alignas(double) double dY[N * out_dim];      
+    // alignas(double) double uY[N * out_dim];      
+    // alignas(double) double gains[N * out_dim];         
+    // alignas(double) double baseY[N * out_dim];         
+    // alignas(double) double basedY[N * out_dim];        
+    // alignas(double) double baseuY[N * out_dim];        
+    // alignas(double) double basegains[N * out_dim];       
+
+    double* P = static_cast<double *>(aligned_alloc(32, N * N * sizeof(double)));
+    double* Y = static_cast<double *>(aligned_alloc(32, N * out_dim * sizeof(double)));
+    double* dY = static_cast<double *>(aligned_alloc(32, N * out_dim * sizeof(double)));
+    double* uY = static_cast<double *>(aligned_alloc(32, N * out_dim * sizeof(double)));
+    double* gains = static_cast<double *>(aligned_alloc(32, N * out_dim * sizeof(double)));
+    double* baseY = static_cast<double *>(aligned_alloc(32, N * out_dim * sizeof(double)));
+    double* basedY = static_cast<double *>(aligned_alloc(32, N * out_dim * sizeof(double)));
+    double* baseuY = static_cast<double *>(aligned_alloc(32, N * out_dim * sizeof(double)));
+    double* basegains = static_cast<double *>(aligned_alloc(32, N * out_dim * sizeof(double)));
     
     typedef void(*comp_func)(const double*, double*, int, int, double*, double*, double*, const double, const double);
     comp_func func;
@@ -91,7 +111,6 @@ public:
     virtual void validate() 
     {
         init_validate();
-
         double error = .0;
 
         (*func)(P, Y, N, out_dim, dY, uY, gains, momentum, eta);

@@ -11,7 +11,7 @@ using namespace std;
 
 constexpr int NR = 32;
 constexpr int CYCLES_REQUIRED = (1*1e8);
-constexpr int REP = 100;
+constexpr int REP = 50;
 constexpr double EPS = (1e-3);
 
 constexpr int N = 2048;

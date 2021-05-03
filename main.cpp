@@ -10,7 +10,7 @@
 #include "utility.hpp"
 
 using namespace computeGPv1;
-using namespace updateGradientv1;
+using namespace updateGradientv3;
 using namespace zeroMeanv1;
 
 int main(int argc, char** argv) {

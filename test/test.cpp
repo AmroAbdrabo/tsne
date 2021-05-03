@@ -6,7 +6,7 @@
 
 /// plug in your implementation using corresponding namespaces
 using namespace computeGPv1;
-using namespace updateGradientv2;
+using namespace updateGradientv3;
 using namespace zeroMeanv1;
 using namespace computeSEDv2;
 

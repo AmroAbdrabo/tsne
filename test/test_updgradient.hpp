@@ -1,7 +1,7 @@
 #pragma once
 
 #include "test.hpp"
-#include "kernels/upgradeGradient.hpp"
+#include "kernels/updateGradient.hpp"
 
 class Test_UpdGradient : public Test
 {
@@ -20,7 +20,7 @@ private:
     double baseuY[N * out_dim]        __attribute__ ((aligned (32)));
     double basegains[N * out_dim]     __attribute__ ((aligned (32)));
     
-    typedef void(*comp_func)(const double*, double*, int, int, double*, double*, double*, const int, const int);
+    typedef void(*comp_func)(const double*, double*, int, int, double*, double*, double*, const double, const double);
     comp_func func;
 
 public:
@@ -52,9 +52,10 @@ public:
 
         double cycles = 0.;
         long num_runs = 100;
-        double multiplier = 1;
+        double multiplier = 1.0;
         unsigned long long start, end;      
 
+        //warmup
         do {
             num_runs = num_runs * multiplier;
             start = start_tsc();
@@ -67,6 +68,7 @@ public:
             multiplier = (CYCLES_REQUIRED) / (cycles);
             
         } while (multiplier > 2);
+        
 
         // cout << "Finish warming up, num_runs =  " << num_runs << ", cycles = " << cycles << endl;
 
@@ -78,11 +80,11 @@ public:
                 (*func)(P, Y, perf_test_N, out_dim, dY, uY, gains, momentum, eta);      
             }
             end = stop_tsc(start);
-
+            
             cycles = ((double)end) / num_runs;
             total_cycles += cycles;
         }
-        cycles = total_cycles / REP;
+        cycles = total_cycles / (double)REP;
         print_perf(cycles, num_runs);
     }
     

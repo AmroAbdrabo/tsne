@@ -11,7 +11,7 @@ using namespace std;
 
 constexpr int NR = 32;
 constexpr int CYCLES_REQUIRED = (1*1e8);
-constexpr int REP = 50;
+constexpr int REP = 100;
 constexpr double EPS = (1e-3);
 
 constexpr int N = 2048;
@@ -29,7 +29,8 @@ template<typename T>
 void rands(T * m, size_t row, size_t col)
 {
     std::random_device rd;
-    std::mt19937 gen{rd()};
+    //std::mt19937 gen{rd()};
+    std::mt19937 gen(42);
     std::uniform_real_distribution<T> dist(-1.0, 1.0);
     for (size_t i = 0; i < row*col; ++i)  
         m[i] = dist(gen);

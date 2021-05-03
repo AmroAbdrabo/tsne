@@ -4,7 +4,7 @@
 #include <random>
 
 #include "kernels/computeGP.hpp"
-#include "kernels/upgradeGradient.hpp"
+#include "kernels/updateGradient.hpp"
 #include "kernels/zeroMean.hpp"
 #include "parameters.hpp"
 #include "utility.hpp"

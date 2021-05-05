@@ -1,5 +1,5 @@
 CXX=g++
-CXXFLAGS=-O3 -march=native -std=c++14
+CXXFLAGS=-O3 -march=native -mavx2 -mfma -mtune=native -fno-tree-vectorize -std=c++14
 INC=-I.
 
 tsne: init main.cpp

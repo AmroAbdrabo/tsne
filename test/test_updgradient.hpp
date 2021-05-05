@@ -9,26 +9,7 @@ private:
     /* data */
     double momentum = .5;
     double eta = 200;
-    int perf_test_N = 256;
-    // double P[N * N]             __attribute__ ((aligned (32)));
-    // double Y[N * out_dim]       __attribute__ ((aligned (32)));
-    // double dY[N * out_dim]      __attribute__ ((aligned (32)));
-    // double uY[N * out_dim]      __attribute__ ((aligned (32)));
-    // double gains[N * out_dim]         __attribute__ ((aligned (32)));
-    // double baseY[N * out_dim]         __attribute__ ((aligned (32)));
-    // double basedY[N * out_dim]        __attribute__ ((aligned (32)));
-    // double baseuY[N * out_dim]        __attribute__ ((aligned (32)));
-    // double basegains[N * out_dim]     __attribute__ ((aligned (32)));  
-
-    // alignas(double) double P[N * N];             
-    // alignas(double) double Y[N * out_dim];       
-    // alignas(double) double dY[N * out_dim];      
-    // alignas(double) double uY[N * out_dim];      
-    // alignas(double) double gains[N * out_dim];         
-    // alignas(double) double baseY[N * out_dim];         
-    // alignas(double) double basedY[N * out_dim];        
-    // alignas(double) double baseuY[N * out_dim];        
-    // alignas(double) double basegains[N * out_dim];       
+    int perf_test_N = 256;     
 
     double* P = static_cast<double *>(aligned_alloc(32, N * N * sizeof(double)));
     double* Y = static_cast<double *>(aligned_alloc(32, N * out_dim * sizeof(double)));
@@ -45,7 +26,17 @@ private:
 
 public:
     Test_UpdGradient(comp_func fn) : func(fn) {}
-    ~Test_UpdGradient() = default;
+    ~Test_UpdGradient(){
+        free(P); P = NULL;
+        free(Y); Y = NULL;
+        free(dY); dY = NULL;
+        free(uY); uY = NULL;
+        free(gains); gains = NULL;
+        free(baseY); baseY = NULL;
+        free(basedY); basedY = NULL;
+        free(baseuY); baseuY = NULL;
+        free(basegains); basegains = NULL;
+    }
 
     virtual void init_perf() {
         rands(P, N, N);

@@ -14,12 +14,19 @@ using namespace updateGradientv3;
 using namespace zeroMeanv1;
 
 int main(int argc, char** argv) {
-    double* X     = (double*) malloc(N * in_dim  * sizeof(double));
-    double* Y     = (double*) malloc(N * out_dim * sizeof(double));
-    double* dY    = (double*) malloc(N * out_dim * sizeof(double));
-    double* uY    = (double*) malloc(N * out_dim * sizeof(double));
-    double* gains = (double*) malloc(N * out_dim * sizeof(double));
-    double* P     = (double*) malloc(N * N       * sizeof(double));
+    // double* X     = (double*) malloc(N * in_dim  * sizeof(double));
+    // double* Y     = (double*) malloc(N * out_dim * sizeof(double));
+    // double* dY    = (double*) malloc(N * out_dim * sizeof(double));
+    // double* uY    = (double*) malloc(N * out_dim * sizeof(double));
+    // double* gains = (double*) malloc(N * out_dim * sizeof(double));
+    // double* P     = (double*) malloc(N * N       * sizeof(double));
+    double* X     = static_cast<double *>(aligned_alloc(32, N * in_dim  * sizeof(double)));
+    double* Y     = static_cast<double *>(aligned_alloc(32, N * out_dim * sizeof(double)));
+    double* dY    = static_cast<double *>(aligned_alloc(32, N * out_dim * sizeof(double)));
+    double* uY    = static_cast<double *>(aligned_alloc(32, N * out_dim * sizeof(double)));
+    double* gains = static_cast<double *>(aligned_alloc(32, N * out_dim * sizeof(double)));
+    double* P     = static_cast<double *>(aligned_alloc(32, N * N       * sizeof(double)));
+
     if(dY == NULL || uY == NULL || gains == NULL || P == NULL) { printf("Memory allocation failed!\n"); exit(1); }
     
     // initialization

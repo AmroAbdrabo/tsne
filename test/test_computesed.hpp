@@ -6,7 +6,7 @@
 class Test_ComputeSED : public Test
 {
 private:
-    static const int perf_test_N = 256;
+    static const int perf_test_N = 64;
     static const int perf_in_dim = 2;
     double X[perf_test_N * perf_in_dim] __attribute__ ((aligned (32)));
     typedef void(*comp_func)(const double*, int, int, double*);

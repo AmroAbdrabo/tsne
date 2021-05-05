@@ -11,7 +11,7 @@
  */
 
 namespace computeSEDv1{
-    void computeSquaredEuclideanDistance(const double* X, size_t N, unsigned int D, double* DD) {
+    void computeSquaredEuclideanDistance(const double* X, int N,  int D, double* DD) {
         const double* XnD = X;
         for(int n = 0; n < N; ++n, XnD += D) { // point[n]
             const double* XmD = XnD + D; // point[n+1]
@@ -34,7 +34,7 @@ namespace computeSEDv1{
 }
 
 namespace computeSEDv2d2{ // with blocking
-    void computeSquaredEuclideanDistance(const double* X, int N, int D, double* DD) {
+    void computeSquaredEuclideanDistance(const double* X, int N,  int D, double* DD) {
        const int b = 16; // block size for cache
 
        for(int i = 0; i < N - b + 1; i += b) {
@@ -67,7 +67,7 @@ namespace computeSEDv2d2{ // with blocking
 }
 
 namespace computeSEDv2d2ru{ // with blocking for cache AND register w unrolling
-    void computeSquaredEuclideanDistance(const double* X, int N, int D, double* DD) {
+    void computeSquaredEuclideanDistance(const double* X, int N,  int D, double* DD) {
        const int b = 16; // block size for cache
        const int rbi = 4; // block size for registers
        const int rbj = 16; // block size for registers
@@ -138,7 +138,7 @@ namespace computeSEDv2d2ru{ // with blocking for cache AND register w unrolling
 
 namespace computeSEDv2d2ruvec{ // with blocking for cache AND register w unrolling
     typedef __m256d d256;
-    void computeSquaredEuclideanDistance(const double* X, int N, int D, double* DD) {
+    void computeSquaredEuclideanDistance(const double* X, int N,  int D, double* DD) {
        const int b = 16; // block size for cache
        const int rbi = 4; // block size for registers, in the following unrolling, assume rbi = 4, o/w it won't work
        const int rbj = 16; // block size for registers
@@ -192,7 +192,7 @@ namespace computeSEDv2d2ruvec{ // with blocking for cache AND register w unrolli
 }
 
 namespace computeSEDv2dx{ // with blocking, any dimension
-    void computeSquaredEuclideanDistance(const double* X, int N, int D, double* DD) {
+    void computeSquaredEuclideanDistance(const double* X, int N,  int D, double* DD) {
        const int b = 16; // block size
 
        for(int i = 0; i < N - b + 1; i += b) {
@@ -227,7 +227,7 @@ namespace computeSEDv2dx{ // with blocking, any dimension
     }
 }
 namespace computeSEDv2d2r{ // with blocking for cache AND register wo unrolling
-    void computeSquaredEuclideanDistance(const double* X, int N, int D, double* DD) {
+    void computeSquaredEuclideanDistance(const double* X, int N,  int D, double* DD) {
        const int b = 16; // block size for cache
        const int rbi = 4; // block size for registers
        const int rbj = 16; // block size for registers
@@ -265,7 +265,7 @@ namespace computeSEDv2d2r{ // with blocking for cache AND register wo unrolling
     }
 }
 namespace computeSEDv2d2ru_depr{ // with blocking for cache AND register w unrolling
-    void computeSquaredEuclideanDistance(const double* X, int N, int D, double* DD) {
+    void computeSquaredEuclideanDistance(const double* X, int N,  int D, double* DD) {
        const int b = 16; // block size for cache
        const int rbi = 4; // block size for registers
        const int rbj = 16; // block size for registers

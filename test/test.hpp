@@ -29,7 +29,8 @@ template<typename T>
 void rands(T * m, size_t row, size_t col)
 {
     std::random_device rd;
-    std::mt19937 gen{rd()};
+    //std::mt19937 gen{rd()};
+    std::mt19937 gen(42);
     std::uniform_real_distribution<T> dist(-1.0, 1.0);
     for (size_t i = 0; i < row*col; ++i)  
         m[i] = dist(gen);

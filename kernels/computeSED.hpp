@@ -11,7 +11,7 @@
  */
 
 namespace computeSEDv1{
-    void computeSquaredEuclideanDistance(const double* X, int N, int D, double* DD) {
+    void computeSquaredEuclideanDistance(const double* X, size_t N, unsigned int D, double* DD) {
         const double* XnD = X;
         for(int n = 0; n < N; ++n, XnD += D) { // point[n]
             const double* XmD = XnD + D; // point[n+1]

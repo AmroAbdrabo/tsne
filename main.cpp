@@ -4,13 +4,13 @@
 #include <random>
 
 #include "kernels/computeGP.hpp"
-#include "kernels/upgradeGradient.hpp"
+#include "kernels/updateGradient.hpp"
 #include "kernels/zeroMean.hpp"
 #include "parameters.hpp"
 #include "utility.hpp"
 
 using namespace computeGPv1;
-using namespace updateGradientv1;
+using namespace updateGradientv3;
 using namespace zeroMeanv1;
 
 int main(int argc, char** argv) {

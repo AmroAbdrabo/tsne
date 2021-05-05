@@ -1,6 +1,9 @@
 #pragma once
 #include "computeSED.hpp"
 #include <cfloat>
+#include <stdio.h>
+#include <math.h>
+#include <stdlib.h>
 
 /**
  * compute variance for each input data point, calculate pairwise distances, and symmetrize the matrix
@@ -14,7 +17,7 @@
 
 namespace computeGPv1 {
     
-    inline void computeGaussianPerplexity(const double* X, const int N, const int in_dim, double* P, const double perp) {
+    inline void computeGaussianPerplexity(const double* X, const size_t N, const unsigned int in_dim, double* P, const double perp) {
         // Compute the squared Euclidean distance matrix
         double* DD = (double*) malloc(N * N * sizeof(double));
         if(DD == NULL) { printf("Memory allocation failed!\n"); exit(1); }

@@ -1,4 +1,6 @@
 #pragma once
+#include <stdlib.h>
+#include <time.h>
 
 // Input and output dimensions
 constexpr int in_dim  = 16; // input dimension
@@ -14,3 +16,11 @@ constexpr int second_phase_iter = max_iter - first_phase_iter;
 constexpr double momentum = .5, final_momentum = .8;
 
 constexpr int random_seed = 42; // seed for random initialization
+
+void init_rand_vec(double *x, int len){
+    srand(time(NULL));
+    for (int i =0; i < len; ++i){
+        x[i] = rand() % 120;
+    }
+    
+}

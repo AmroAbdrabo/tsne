@@ -1,5 +1,6 @@
 #ifndef WIN32
-#include "computeGP.hpp"
+#include "./../kernels/computeGP.hpp"
+#include "./../kernels/computeSED.hpp"
 #include <sys/time.h>
 #endif
 #include <stdlib.h>
@@ -32,7 +33,7 @@ double rdtsc(const double* X, double* P, int n) {
     while(num_runs < (1 << 14)) {
         start = start_tsc();
         for (i = 0; i < num_runs; ++i) {
-            computeGPv1::computeGaussianPerplexity(X, N, in_dim, P, perp);
+            computeSEDv2::computeSquaredEuclideanDistance(X, n, in_dim, P);
         }
         cycles = stop_tsc(start);
 
@@ -44,27 +45,34 @@ double rdtsc(const double* X, double* P, int n) {
 
     start = start_tsc();
     for (i = 0; i < num_runs; ++i) {
-         computeGPv1::computeGaussianPerplexity(X, N, in_dim, P, perp);
+         computeSEDv2::computeSquaredEuclideanDistance(X, n, in_dim, P);
     }
 
     cycles = stop_tsc(start)/num_runs;
-    printf("done with %lf ", temp);
+    for (int i = 0; i < 10; ++i){
+        temp += P[i];
+    }
+    printf("done with %lf \n", temp);
    
     return (double) cycles;
 }
 
 
 int main(int argc, char **argv) {
-    if (argc!=2) {
-        printf("Please enter filename: example ./a.out file.txt \n");
+    if (argc!=3) {
+        printf("Please enter filename and input size: example ./a.out 100 file.txt \n");
         return -1;
         
     }
-    //int n = atoi(argv[1]);
-    char *filename = argv[1];
+    int N = atoi(argv[1]);
+    char *filename = argv[2];
+    
+    
     
     double* X = (double*)malloc(N*in_dim*sizeof(double));
     double* P = (double*)malloc(N*N*sizeof(double));
+    init_rand_vec(X, N*in_dim);
+    init_rand_vec(P, N*N);
     
     FILE *fptr;
     fptr = fopen(filename,"a+");
@@ -77,5 +85,6 @@ int main(int argc, char **argv) {
     free(P);
     return 0;
 }
+
 
 

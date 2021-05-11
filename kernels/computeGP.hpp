@@ -37,17 +37,24 @@ namespace computeGPv1 {
 
             // Iterate until we found a good perplexity
             int iter = 0;
-            while(!found && iter < 200) {
+            while(iter < 200) {
+            // while(!found && iter < 200) {
 
                 // Compute Gaussian kernel row
-                for(int m = 0; m < N; m++) P[nN + m] = exp(-beta * DD[nN + m]);
+                for(int m = 0; m < N; m++) {
+                    P[nN + m] = exp(-beta * DD[nN + m]);
+                }
                 P[nN + n] = DBL_MIN;
 
                 // Compute entropy of current row
                 sum_P = DBL_MIN;
-                for(int m = 0; m < N; m++) sum_P += P[nN + m];
+                for(int m = 0; m < N; m++) {
+                    sum_P += P[nN + m];
+                }
                 double H = 0.0;
-                for(int m = 0; m < N; m++) H += beta * (DD[nN + m] * P[nN + m]);
+                for(int m = 0; m < N; m++) {
+                    H += beta * (DD[nN + m] * P[nN + m]);
+                }
                 H = (H / sum_P) + log(sum_P);
 
                 // Evaluate whether the entropy is within the tolerance level
@@ -58,17 +65,21 @@ namespace computeGPv1 {
                 else {
                     if(Hdiff > 0) {
                         min_beta = beta;
-                        if(max_beta == DBL_MAX || max_beta == -DBL_MAX)
+                        if (max_beta == DBL_MAX || max_beta == -DBL_MAX) {
                             beta *= 2.0;
-                        else
+                        }
+                        else {
                             beta = (beta + max_beta) / 2.0;
+                        }
                     }
                     else {
                         max_beta = beta;
-                        if(min_beta == -DBL_MAX || min_beta == DBL_MAX)
+                        if(min_beta == -DBL_MAX || min_beta == DBL_MAX) {
                             beta /= 2.0;
-                        else
+                        }
+                        else {
                             beta = (beta + min_beta) / 2.0;
+                        }
                     }
                 }
 
@@ -77,7 +88,9 @@ namespace computeGPv1 {
             }
 
             // Row normalize P
-            for(int m = 0; m < N; m++) P[nN + m] /= sum_P;
+            for(int m = 0; m < N; m++) {
+                P[nN + m] /= sum_P;
+            }
             nN += N;
         }
 
@@ -96,8 +109,12 @@ namespace computeGPv1 {
             nN += N;
         }
         double sum_P = .0;
-        for(int i = 0; i < N * N; i++) sum_P += P[i];
-        for(int i = 0; i < N * N; i++) P[i] /= sum_P;
+        for(int i = 0; i < N * N; i++) {
+            sum_P += P[i];
+        }
+        for(int i = 0; i < N * N; i++) {
+            P[i] /= sum_P;
+        }
     }
 }
 
@@ -123,7 +140,7 @@ namespace computeGPv2 {
 
             // Iterate until we found a good perplexity
             int iter = 0;
-            while(iter < 100) {
+            while(iter < 200) {
             // while(!found && iter < 200) {
 
                 // Compute Gaussian kernel row

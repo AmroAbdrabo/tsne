@@ -1,5 +1,5 @@
 CXX=g++
-CXXFLAGS=-O3 -march=native -ffast-math -std=c++14 -fno-tree-vectorize
+CXXFLAGS=-O3 -march=native -ffast-math -std=c++17 -fno-tree-vectorize
 INC=-I.
 
 tsne: init main.cpp

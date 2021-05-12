@@ -113,6 +113,53 @@ public:
         }
     }
 
+    void sweep_block_size() {
+        std::vector<int> blocksizes_to_test {4, 8, 16, 32, 64, 128, 256};
+        int perf_test_N = 1024; 
+        int perf_test_dim = 2;
+        double * X = static_cast<double*>(aligned_alloc(32, perf_test_dim*perf_test_N*sizeof(double)));
+        double * DD = static_cast<double*>(aligned_alloc(32, perf_test_N*perf_test_N*sizeof(double)));
+        printElement("BlockSize");
+        printElement("Cycles");
+        std::cout << std::endl;
+        for(auto b : blocksizes_to_test) {
+            init_perf(X, perf_test_N, perf_in_dim);
+            double cycles = 0.;
+            long num_runs = 8;
+            double multiplier = 1;
+            unsigned long long start, end;
+
+            do {
+                num_runs = num_runs * multiplier;
+                start = start_tsc();
+                for (size_t i = 0; i < num_runs; i++) {
+                    computeSEDv2d2ru::computeSquaredEuclideanDistance(X, perf_test_N, perf_in_dim, DD, b);      
+                }
+                end = stop_tsc(start);
+
+                cycles = (double)end;
+                multiplier = (CYCLES_REQUIRED) / (cycles);
+                
+            } while (multiplier > 2);
+
+            double total_cycles = 0;
+            for (size_t j = 0; j < REP; j++) {
+                start = start_tsc();
+                for (size_t i = 0; i < num_runs; ++i) {
+                    computeSEDv2d2ru::computeSquaredEuclideanDistance(X, perf_test_N, perf_in_dim, DD, b);      
+                }
+                end = stop_tsc(start);
+
+                cycles = ((double)end) / num_runs;
+                total_cycles += cycles;
+            }
+            cycles = total_cycles / REP;
+            printElement(b);
+            printElement(cycles);
+            std::cout << std::endl;
+        }
+    }
+
 
     virtual void perf_test() {
         perf_test(this->func, this->X, perf_test_N, perf_in_dim, this->DD);

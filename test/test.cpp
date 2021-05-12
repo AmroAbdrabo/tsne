@@ -38,16 +38,17 @@ int main(int argc, char** argv) {
         }
         else if(to_test == "computesed") {
             test = new Test_ComputeSED(computeSquaredEuclideanDistance);
-            std::vector<std::string> names {"Baseline", "Blocking", "Blocking++", "Vectorization"}; 
-            std::vector<Test_ComputeSED::comp_func> func_to_test {
-                computeSEDv1::computeSquaredEuclideanDistance,
-                computeSEDv2d2::computeSquaredEuclideanDistance,
-                computeSEDv2d2ru::computeSquaredEuclideanDistance,
-                computeSEDv2d2ruvec::computeSquaredEuclideanDistance
-            };
-            std::vector<int> size_to_test {64, 128, 256, 512, 1024, 2048};
+            //std::vector<std::string> names {"Baseline", "Blocking", "Blocking++", "Vectorization"}; 
+            //std::vector<Test_ComputeSED::comp_func> func_to_test {
+                //computeSEDv1::computeSquaredEuclideanDistance,
+                //computeSEDv2d2::computeSquaredEuclideanDistance,
+                //computeSEDv2d2ru::computeSquaredEuclideanDistance,
+                //computeSEDv2d2ruvec::computeSquaredEuclideanDistance
+            //};
+            //std::vector<int> size_to_test {64, 128, 256, 512, 1024, 2048};
             //static_cast<Test_ComputeSED*>(test)->sweep_input_size();
-            static_cast<Test_ComputeSED*>(test)->sweep(func_to_test, names, size_to_test);
+            //static_cast<Test_ComputeSED*>(test)->sweep(func_to_test, names, size_to_test);
+            static_cast<Test_ComputeSED*>(test)->sweep_block_size();
         }
         else {
             cout << "Invalid kernel name!\n";

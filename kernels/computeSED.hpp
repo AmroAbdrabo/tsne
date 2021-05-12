@@ -1,5 +1,6 @@
 #pragma once
 #include "immintrin.h"
+#include <iostream>
 
 /**
  * compute the pairwise squared Euclidean Distance
@@ -86,49 +87,109 @@ namespace computeSEDv2d2ru{ // with blocking for cache AND register w unrolling
                     double x2d0 = Xii[4], x2d1 = Xii[5];
                     double x3d0 = Xii[6], x3d1 = Xii[7];
                     
-                    for(int jj = j; jj < j + b; jj += 1, Xjj += D) {
+                    for(int jj = j; jj < j + b - 1; jj += 2, Xjj += D * 2) {
                         if(ii == jj) {
                             DD[ii * N + jj] = 0.0;
-                            continue;
+                            double tmp3, tmp4, ddist; // dynamic register renaming
+                            
+                            // stay in registers for reuse
+                            double yyd0 = Xjj[2];
+                            double yyd1 = Xjj[3];
+
+                            int bbase = ii * N + jj + 1; 
+                            int ssymm_base = jj * N + ii + N; 
+                            
+                            tmp3 = x0d0 - yyd0;
+                            tmp4 = x0d1 - yyd1;
+                            ddist = tmp3 * tmp3 + tmp4 * tmp4;
+                            DD[bbase] = ddist;
+                            DD[ssymm_base] = ddist;
+                            bbase += N;
+                            
+                            tmp3 = x1d0 - yyd0;
+                            tmp4 = x1d1 - yyd1;
+                            ddist = tmp3 * tmp3 + tmp4 * tmp4;
+                            DD[bbase] = ddist;
+                            DD[ssymm_base + 1] = ddist;
+                            bbase += N;
+
+                            tmp3 = x2d0 - yyd0;
+                            tmp4 = x2d1 - yyd1;
+                            ddist = tmp3 * tmp3 + tmp4 * tmp4;
+                            DD[bbase] = ddist;
+                            DD[ssymm_base + 2] = ddist;
+                            bbase += N;
+
+                            tmp3 = x3d0 - yyd0;
+                            tmp4 = x3d1 - yyd1;
+                            ddist = tmp3 * tmp3 + tmp4 * tmp4;
+                            DD[bbase] = ddist;
+                            DD[ssymm_base + 3] = ddist;
+                        } else { 
+                            double tmp1, tmp2, dist, tmp3, tmp4, ddist; // dynamic register renaming
+                            
+                            // stay in registers for reuse
+                            double yd0 = Xjj[0];
+                            double yd1 = Xjj[1];
+                            double yyd0 = Xjj[2];
+                            double yyd1 = Xjj[3];
+
+                            int base = ii * N + jj;
+                            int symm_base = jj * N + ii;
+                            int bbase = base + 1; 
+                            int ssymm_base = symm_base + N; 
+                            
+                            tmp1 = x0d0 - yd0;
+                            tmp2 = x0d1 - yd1;
+                            tmp3 = x0d0 - yyd0;
+                            tmp4 = x0d1 - yyd1;
+                            dist = tmp1 * tmp1 + tmp2 * tmp2;
+                            ddist = tmp3 * tmp3 + tmp4 * tmp4;
+                            DD[base] = dist;
+                            DD[symm_base] = dist;
+                            DD[bbase] = ddist;
+                            DD[ssymm_base] = ddist;
+                            base += N;
+                            bbase += N;
+                            
+                            tmp1 = x1d0 - yd0;
+                            tmp2 = x1d1 - yd1;
+                            tmp3 = x1d0 - yyd0;
+                            tmp4 = x1d1 - yyd1;
+                            dist = tmp1 * tmp1 + tmp2 * tmp2;
+                            ddist = tmp3 * tmp3 + tmp4 * tmp4;
+                            DD[base] = dist;
+                            DD[symm_base + 1] = dist;
+                            DD[bbase] = ddist;
+                            DD[ssymm_base + 1] = ddist;
+                            base += N;
+                            bbase += N;
+
+                            tmp1 = x2d0 - yd0;
+                            tmp2 = x2d1 - yd1;
+                            tmp3 = x2d0 - yyd0;
+                            tmp4 = x2d1 - yyd1;
+                            dist = tmp1 * tmp1 + tmp2 * tmp2;
+                            ddist = tmp3 * tmp3 + tmp4 * tmp4;
+                            DD[base] = dist;
+                            DD[symm_base + 2] = dist;
+                            DD[bbase] = ddist;
+                            DD[ssymm_base + 2] = ddist;
+                            base += N;
+                            bbase += N;
+
+                            tmp1 = x3d0 - yd0;
+                            tmp2 = x3d1 - yd1;
+                            tmp3 = x3d0 - yyd0;
+                            tmp4 = x3d1 - yyd1;
+                            dist = tmp1 * tmp1 + tmp2 * tmp2;
+                            ddist = tmp3 * tmp3 + tmp4 * tmp4;
+                            DD[base] = dist;
+                            DD[symm_base + 3] = dist;
+                            DD[bbase] = ddist;
+                            DD[ssymm_base + 3] = ddist;
                         }
-
-                        int c = ii;
                         
-                        double tmp1, tmp2, dist; // dynamic register renaming
-                        
-                        // stay in registers for reuse
-                        double yd0 = Xjj[0];
-                        double yd1 = Xjj[1];
-
-                        int base = ii * N + jj;
-                        int symm_base = jj * N + ii;
-                        
-                        tmp1 = x0d0 - yd0;
-                        tmp2 = x0d1 - yd1;
-                        dist = tmp1 * tmp1 + tmp2 * tmp2;
-                        DD[base] = dist;
-                        DD[symm_base] = dist;
-                        base += N;
-                        
-                        tmp1 = x1d0 - yd0;
-                        tmp2 = x1d1 - yd1;
-                        dist = tmp1 * tmp1 + tmp2 * tmp2;
-                        DD[base] = dist;
-                        DD[symm_base + 1] = dist;
-                        base += N;
-
-                        tmp1 = x2d0 - yd0;
-                        tmp2 = x2d1 - yd1;
-                        dist = tmp1 * tmp1 + tmp2 * tmp2;
-                        DD[base] = dist;
-                        DD[symm_base + 2] = dist;
-                        base += N;
-
-                        tmp1 = x3d0 - yd0;
-                        tmp2 = x3d1 - yd1;
-                        dist = tmp1 * tmp1 + tmp2 * tmp2;
-                        DD[base] = dist;
-                        DD[symm_base + 3] = dist;
                     }
                 }
             }

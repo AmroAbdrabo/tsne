@@ -45,7 +45,7 @@ int main(int argc, char** argv) {
                 computeSEDv2d2ru::computeSquaredEuclideanDistance,
                 computeSEDv2d2ruvec::computeSquaredEuclideanDistance
             };
-            std::vector<int> size_to_test {64, 128, 256, 512, 1024, 2048};
+            std::vector<int> size_to_test {64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384};
             //static_cast<Test_ComputeSED*>(test)->sweep_input_size();
             static_cast<Test_ComputeSED*>(test)->sweep(func_to_test, names, size_to_test);
         }
@@ -55,8 +55,8 @@ int main(int argc, char** argv) {
             exit(1);
         }
 
-        test->validate();
-        test->perf_test();
+        //test->validate();
+        //test->perf_test();
         free(test);
         test = nullptr;
     }

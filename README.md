@@ -42,6 +42,7 @@ This is the code base for the advanced system lab semester project. In this proj
 | computegp   | Compute variance. Before the training phase, find for each data point the best variance based on perplexity. |
 | updgradient | Compute the gradient and update the output in each training iteration. |
 | zeromean    | Centralize the data. For a N*D matrix X, zero out the mean for each dimension. |
+| computesed  | Compute pairwise Euclidean distances and write to a N*N matrix.|
 
 ## Usage
 
@@ -59,7 +60,14 @@ namespace zeroMeanv2 {
 } // version 2
 ```
 
-After you finish working on improving a new version of certain kernel, you always want to test if it is correct and if the performance has been improved. To do this, see the following
+After you finish working on improving a new version of certain kernel, you always want to test if it is correct and if the performance has been improved. To do this, first make sure to change the namespace in `test/test.cpp`.
+
+```cpp
+// using namespace zeroMeanv1 // make sure to comment out the old version
+using namespace zerMean v2 // apply your optimized version
+```
+
+After you have finished above, compile it.
 
 ```shell
 # assume you are in the source root directory
@@ -67,7 +75,9 @@ make kernel_test # this will do an out-of-source build
 ./build/kernel_test <your kernel name>
 ```
 
-Kernels that are test-able for now are `computegp`, `updgradient` and `zeromean`. The test program will first check if your implementation is correct and then measure how many cycles it takes.
+Kernels that are test-able for now are `computegp`, `updgradient`, `zeromean` and `computesed`. The test program will first check if your implementation is correct and then measure how many cycles it takes.
+
+**Known issue for computegp: the results are very small values and thus checking correctness is not accurate enough for now.**
 
 ### Work with the real t-SNE program
 
@@ -106,4 +116,3 @@ This summarizes a list of features unavailable for the current implementation.
 1. Currently we only support 2-dimension output. This is hardcoded in the `parameter.hpp`.
 2. We cannot time the t-SNE program for now, i.e. no end-to-end performance report. However, we can time the kernels individually.
 3. We have not conducted a comprehensive study on choosing the most efficient compiler and the set of compiler flags.
-4. We have not taken the Euler platform into account. On Euler, some extra work (e.g., load modules) are needed.

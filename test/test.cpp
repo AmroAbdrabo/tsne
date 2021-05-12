@@ -56,8 +56,8 @@ int main(int argc, char** argv) {
             exit(1);
         }
 
-        test->validate();
-        test->perf_test();
+        //test->validate();
+        //test->perf_test();
         free(test);
         test = nullptr;
     }

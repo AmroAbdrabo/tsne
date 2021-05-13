@@ -5,6 +5,7 @@
 #include <cfloat>
 #include <stdio.h>
 #include <math.h>
+#include <iostream>
 #include <stdlib.h>
 
 /**
@@ -257,7 +258,6 @@ namespace computeGPv3 {
             // while(!found && iter < 200) {
 
                 // Compute Gaussian kernel row
-                // unrolling and avoid aliasing
                 for(int m = 0; m < N; m+=4) {
                     #pragma ivdep
                     P[nN + m] = exp(-beta * DD[nN + m]);
@@ -269,8 +269,7 @@ namespace computeGPv3 {
 
                 // Compute entropy of current row
                 sum_P = DBL_MIN;
-                double sum1, sum2, sum3, sum4;
-                // unrolling and ILP
+                double sum1 = 0.0, sum2 = 0.0, sum3 = 0.0, sum4 = 0.0;
                 for(int m = 0; m < N; m+=4) {
                     sum1 += P[nN + m];
                     sum2 += P[nN + m + 1];
@@ -278,13 +277,12 @@ namespace computeGPv3 {
                     sum4 += P[nN + m + 3];
                 }
                 sum_P += sum1 + sum2 + sum3 + sum4;
-                double H = 0.0, h1, h2, h3, h4;
-                // unrolling and ILP
-                for(int m = 0; m < N; m++) {
+                double H = 0.0, h1 = 0.0, h2 = 0.0, h3 = 0.0, h4 = 0.0;
+                for(int m = 0; m < N; m+=4) {
                     h1 += beta * (DD[nN + m] * P[nN + m]);
-                    h2 += beta * (DD[nN + m] * P[nN + m]);
-                    h3 += beta * (DD[nN + m] * P[nN + m]);
-                    h4 += beta * (DD[nN + m] * P[nN + m]);
+                    h2 += beta * (DD[nN + m + 1] * P[nN + m + 1]);
+                    h3 += beta * (DD[nN + m + 2] * P[nN + m + 2]);
+                    h4 += beta * (DD[nN + m + 3] * P[nN + m + 3]);
                 }
                 H += h1 + h2 + h3 + h4;
                 H = (H / sum_P) + log(sum_P);
@@ -320,14 +318,12 @@ namespace computeGPv3 {
             }
 
             // Row normalize P
-            // unrolling and multiplication into division
-            double inv_sum_P = 1 / sum_P;
             for(int m = 0; m < N; m+=4) {
                 #pragma ivdep
-                P[nN + m] *= inv_sum_P;
-                P[nN + m + 1] *= inv_sum_P;
-                P[nN + m + 2] *= inv_sum_P;
-                P[nN + m + 3] *= inv_sum_P;
+                P[nN + m] /= sum_P;
+                P[nN + m + 1] /= sum_P;
+                P[nN + m + 2] /= sum_P;
+                P[nN + m + 3] /= sum_P;
             }
             nN += N;
         }
@@ -336,37 +332,54 @@ namespace computeGPv3 {
         free(DD); DD = NULL;
 
         // Symmetrize input similarities
+        // TODO: Any optimizations here?
+        // nN = 0;
+        // for(int n = 0; n < N; n++) {
+        //     int mN = (n + 1) * N;
+        //     int m = 0;
+        //     for(m = n + 1; m < N; m+=4) {
+        //         P[nN + m] += P[mN + n];
+        //         P[mN + n]  = P[nN + m];
+        //         mN += N;
+
+        //         P[nN + m + 1] += P[mN + n + 1];
+        //         P[mN + n + 1]  = P[nN + m + 1];
+        //         mN += N;
+
+        //         P[nN + m + 2] += P[mN + n + 2];
+        //         P[mN + n + 2]  = P[nN + m + 2];
+        //         mN += N;
+
+        //         P[nN + m + 3] += P[mN + n + 3];
+        //         P[mN + n + 3]  = P[nN + m + 3];
+        //         mN += N;
+        //     }
+        //     for(; m < N; m++) {
+        //         P[nN + m] += P[mN + n];
+        //         P[mN + n]  = P[nN + m];
+        //         mN += N;
+        //     }
+        //     nN += N;
+        // }
         nN = 0;
         for(int n = 0; n < N; n++) {
             int mN = (n + 1) * N;
-            // unrolling,  ILP and scalar replacement
-            double sum1, sum2, sum3, sum4;
-            for(int m = n + 1; m < N; m+=4) {
-                sum1 += P[mN + n];
-                P[mN + n]  = sum1;
-                P[nN + m] = sum1;
-                sum2 += P[mN + n + 1];
-                P[mN + n + 1]  = sum2;
-                P[nN + m + 1] = sum2;
-                sum3 += P[mN + n + 2];
-                P[mN + n + 2]  = sum3;
-                P[nN + m + 2] = sum3;
-                sum4 += P[mN + n + 3];
-                P[mN + n + 3]  = sum4;
-                P[mN + m + 3] = sum4;
+            for(int m = n + 1; m < N; m++) {
+                #pragma ivdep
+                P[nN + m] += P[mN + n];
+                P[mN + n]  = P[nN + m];
                 mN += N;
             }
             nN += N;
         }
         double sum_P = .0, sum1, sum2, sum3, sum4;
-        // unrolling and ILP
         for(int i = 0; i < N * N; i+=4) {
             sum1 += P[i];
             sum2 += P[i + 1];
             sum3 += P[i + 2];
             sum4 += P[i + 3];
         }
-        sum_P = sum1 + sum2 + sum3 + sum4;
+        sum_P += sum1 + sum2 + sum3 + sum4;
         for(int i = 0; i < N * N; i+=4) {
             #pragma ivdep
             P[i] /= sum_P;
@@ -403,7 +416,6 @@ namespace computeGPv4 {
             // while(!found && iter < 200) {
 
                 // Compute Gaussian kernel row
-                // unrolling and avoid aliasing
                 for(int m = 0; m < N; m+=4) {
                     #pragma ivdep
                     P[nN + m] = exp(-beta * DD[nN + m]);
@@ -415,8 +427,7 @@ namespace computeGPv4 {
 
                 // Compute entropy of current row
                 sum_P = DBL_MIN;
-                double sum1, sum2, sum3, sum4;
-                // unrolling and ILP
+                double sum1 = 0.0, sum2 = 0.0, sum3 = 0.0, sum4 = 0.0;
                 for(int m = 0; m < N; m+=4) {
                     sum1 += P[nN + m];
                     sum2 += P[nN + m + 1];
@@ -424,13 +435,12 @@ namespace computeGPv4 {
                     sum4 += P[nN + m + 3];
                 }
                 sum_P += sum1 + sum2 + sum3 + sum4;
-                double H = 0.0, h1, h2, h3, h4;
-                // unrolling and ILP
+                double H = 0.0, h1 = 0.0, h2 = 0.0, h3 = 0.0, h4 = 0.0;
                 for(int m = 0; m < N; m+=4) {
                     h1 += beta * (DD[nN + m] * P[nN + m]);
-                    h2 += beta * (DD[nN + m] * P[nN + m]);
-                    h3 += beta * (DD[nN + m] * P[nN + m]);
-                    h4 += beta * (DD[nN + m] * P[nN + m]);
+                    h2 += beta * (DD[nN + m + 1] * P[nN + m + 1]);
+                    h3 += beta * (DD[nN + m + 2] * P[nN + m + 2]);
+                    h4 += beta * (DD[nN + m + 3] * P[nN + m + 3]);
                 }
                 H += h1 + h2 + h3 + h4;
                 H = (H / sum_P) + log(sum_P);
@@ -443,16 +453,16 @@ namespace computeGPv4 {
                 else {
                     if(Hdiff > 0) {
                         min_beta = beta;
-                        if(max_beta == DBL_MAX || max_beta == -DBL_MAX)
+                        if (max_beta == DBL_MAX || max_beta == -DBL_MAX) {
                             beta *= 2.0;
-                        else
-                            // turn division into multiplication
+                        }
+                        else {
                             beta = (beta + max_beta) * 0.5;
+                        }
                     }
                     else {
                         max_beta = beta;
                         if(min_beta == -DBL_MAX || min_beta == DBL_MAX) {
-                            // turn division into multiplication
                             beta *= 0.5;
                         }
                         else {
@@ -466,8 +476,7 @@ namespace computeGPv4 {
             }
 
             // Row normalize P
-            // unrolling and multiplication into division
-            double inv_sum_P = 1 / sum_P;
+            double inv_sum_P = 1.0 / sum_P;
             for(int m = 0; m < N; m+=4) {
                 #pragma ivdep
                 P[nN + m] *= inv_sum_P;
@@ -479,32 +488,59 @@ namespace computeGPv4 {
         }
 
         // Clean up memory
-        free(DD);
-        DD = NULL;
+        free(DD); DD = NULL;
+
         // Symmetrize input similarities
+        // TODO: Any optimizations here?
+        // nN = 0;
+        // for(int n = 0; n < N; n++) {
+        //     int mN = (n + 1) * N;
+        //     int m = 0;
+        //     for(m = n + 1; m < N; m+=4) {
+        //         P[nN + m] += P[mN + n];
+        //         P[mN + n]  = P[nN + m];
+        //         mN += N;
+
+        //         P[nN + m + 1] += P[mN + n + 1];
+        //         P[mN + n + 1]  = P[nN + m + 1];
+        //         mN += N;
+
+        //         P[nN + m + 2] += P[mN + n + 2];
+        //         P[mN + n + 2]  = P[nN + m + 2];
+        //         mN += N;
+
+        //         P[nN + m + 3] += P[mN + n + 3];
+        //         P[mN + n + 3]  = P[nN + m + 3];
+        //         mN += N;
+        //     }
+        //     for(; m < N; m++) {
+        //         P[nN + m] += P[mN + n];
+        //         P[mN + n]  = P[nN + m];
+        //         mN += N;
+        //     }
+        //     nN += N;
+        // _}
         nN = 0;
         for(int n = 0; n < N; n++) {
             int mN = (n + 1) * N;
             for(int m = n + 1; m < N; m++) {
+                #pragma ivdep
                 P[nN + m] += P[mN + n];
                 P[mN + n]  = P[nN + m];
                 mN += N;
             }
             nN += N;
         }
-
-        size_t N_sq = N*N;
         double sum_P = .0, sum1, sum2, sum3, sum4;
-        // unrolling and ILP
+        int N_sq = N*N;
         for(int i = 0; i < N_sq; i+=4) {
             sum1 += P[i];
             sum2 += P[i + 1];
             sum3 += P[i + 2];
             sum4 += P[i + 3];
         }
-        sum_P = sum1 + sum2 + sum3 + sum4;
-        // unrolling, ILP, avoid aliasing and turn division into multiplication
-        double inv_sum_P = 1 / sum_P;
+        sum_P += sum1 + sum2 + sum3 + sum4;
+        double inv_sum_P = 1.0 / sum_P;
         for(int i = 0; i < N_sq; i+=4) {
             #pragma ivdep
             P[i] *= inv_sum_P;
@@ -514,9 +550,8 @@ namespace computeGPv4 {
         }
     }
 }
-
 // vectorized version
-namespace computeGPv6 {
+namespace computeGPv5 {
 
     inline void computeGaussianPerplexity(const double* X, const size_t N, const unsigned int in_dim, double* P, const double perp) {
         // Compute the squared Euclidean distance matrix

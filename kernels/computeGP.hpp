@@ -426,7 +426,7 @@ namespace computeGPv4 {
                 sum_P += sum1 + sum2 + sum3 + sum4;
                 double H = 0.0, h1, h2, h3, h4;
                 // unrolling and ILP
-                for(int m = 0; m < N; m++) {
+                for(int m = 0; m < N; m+=4) {
                     h1 += beta * (DD[nN + m] * P[nN + m]);
                     h2 += beta * (DD[nN + m] * P[nN + m]);
                     h3 += beta * (DD[nN + m] * P[nN + m]);
@@ -481,26 +481,13 @@ namespace computeGPv4 {
         // Clean up memory
         free(DD);
         DD = NULL;
-
         // Symmetrize input similarities
         nN = 0;
         for(int n = 0; n < N; n++) {
             int mN = (n + 1) * N;
-            // unrolling,  ILP and scalar replacement
-            double sum1, sum2, sum3, sum4;
-            for(int m = n + 1; m < N; m+=4) {
-                sum1 += P[mN + n];
-                P[mN + n]  = sum1;
-                P[nN + m] = sum1;
-                sum2 += P[mN + n + 1];
-                P[mN + n + 1]  = sum2;
-                P[nN + m + 1] = sum2;
-                sum3 += P[mN + n + 2];
-                P[mN + n + 2]  = sum3;
-                P[nN + m + 2] = sum3;
-                sum4 += P[mN + n + 3];
-                P[mN + n + 3]  = sum4;
-                P[mN + m + 3] = sum4;
+            for(int m = n + 1; m < N; m++) {
+                P[nN + m] += P[mN + n];
+                P[mN + n]  = P[nN + m];
                 mN += N;
             }
             nN += N;
@@ -567,12 +554,27 @@ namespace computeGPv6 {
 
                 // Compute entropy of current row
                 sum_P = DBL_MIN;
-                for(int m = 0; m < N; m++) {
-                    sum_P += P[nN + m];
+                __m256d p_vec_val;
+                for(int m = 0; m < N; m+=4) {
+                    p_vec_val = _mm256_loadu_pd(P + nN + m);
+                    __m128d vlow  = _mm256_castpd256_pd128(p_vec_val);
+                    __m128d vhigh = _mm256_extractf128_pd(p_vec_val, 1);
+                    vlow  = _mm_add_pd(vlow, vhigh);
+                    __m128d high64 = _mm_unpackhi_pd(vlow, vlow);
+                    sum_P += _mm_cvtsd_f64(_mm_add_sd(vlow, high64));
                 }
                 double H = 0.0;
-                for(int m = 0; m < N; m++) {
-                    H += beta * (DD[nN + m] * P[nN + m]);
+                __m256d d_vec_val, beta_vec = _mm256_set1_pd(beta), temp;
+                for(int m = 0; m < N; m+=4) {
+                    p_vec_val = _mm256_loadu_pd(P + nN + m);
+                    d_vec_val = _mm256_loadu_pd(P + nN + m);
+                    temp = _mm256_mul_pd(p_vec_val, d_vec_val);
+                    temp = _mm256_mul_pd(temp, beta_vec);
+                    __m128d vlow  = _mm256_castpd256_pd128(temp);
+                    __m128d vhigh = _mm256_extractf128_pd(temp, 1);
+                    vlow  = _mm_add_pd(vlow, vhigh);
+                    __m128d high64 = _mm_unpackhi_pd(vlow, vlow);
+                    H += _mm_cvtsd_f64(_mm_add_sd(vlow, high64));
                 }
                 H = (H / sum_P) + log(sum_P);
 
@@ -588,16 +590,16 @@ namespace computeGPv6 {
                             beta *= 2.0;
                         }
                         else {
-                            beta = (beta + max_beta) / 2.0;
+                            beta = (beta + max_beta) * 0.5;
                         }
                     }
                     else {
                         max_beta = beta;
                         if(min_beta == -DBL_MAX || min_beta == DBL_MAX) {
-                            beta /= 2.0;
+                            beta *= 0.5;
                         }
                         else {
-                            beta = (beta + min_beta) / 2.0;
+                            beta = (beta + min_beta) * 0.5;
                         }
                     }
                 }
@@ -607,8 +609,13 @@ namespace computeGPv6 {
             }
 
             // Row normalize P
-            for(int m = 0; m < N; m++) {
-                P[nN + m] /= sum_P;
+            __m256d p_vec;
+            double inv_sum_P = 1 / sum_P;
+            __m256d inv_sum_P_vec = _mm256_set1_pd(inv_sum_P);
+            for(int m = 0; m < N; m+=4) {
+                p_vec = _mm256_loadu_pd(P + nN + m);
+                p_vec = _mm256_mul_pd(p_vec, inv_sum_P_vec);
+                _mm256_store_pd(P + nN + m, p_vec);
             }
             nN += N;
         }
@@ -617,6 +624,7 @@ namespace computeGPv6 {
         free(DD); DD = NULL;
 
         // Symmetrize input similarities
+        // is this vectorizable?
         nN = 0;
         for(int n = 0; n < N; n++) {
             int mN = (n + 1) * N;
@@ -627,12 +635,23 @@ namespace computeGPv6 {
             }
             nN += N;
         }
+        __m256d p_vec;
         double sum_P = .0;
-        for(int i = 0; i < N * N; i++) {
-            sum_P += P[i];
+        int N_sq = N * N;
+        for(int i = 0; i < N_sq; i+=4) {
+            p_vec = _mm256_loadu_pd(P + i);
+            __m128d vlow  = _mm256_castpd256_pd128(p_vec);
+            __m128d vhigh = _mm256_extractf128_pd(p_vec, 1);
+            vlow  = _mm_add_pd(vlow, vhigh);
+            __m128d high64 = _mm_unpackhi_pd(vlow, vlow);
+            sum_P += _mm_cvtsd_f64(_mm_add_sd(vlow, high64));
         }
-        for(int i = 0; i < N * N; i++) {
-            P[i] /= sum_P;
+        double inv_sum_P = 1 / sum_P;
+        __m256d inv_sum_P_vec = _mm256_set1_pd(inv_sum_P);
+        for(int i = 0; i < N_sq; i+=4) {
+            p_vec = _mm256_loadu_pd(P + i);
+            p_vec = _mm256_mul_pd(p_vec, inv_sum_P_vec);
+            _mm256_store_pd(P + i, p_vec);
         }
     }
 }

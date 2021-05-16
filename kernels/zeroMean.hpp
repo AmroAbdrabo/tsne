@@ -242,3 +242,134 @@ namespace zeroMeanv4 {
     }
 
 }
+
+namespace zeroMeanv5 {
+    inline void zeromeanblocked(double *X, int N, int D){
+        
+        //constexpr int cacheline = 64; // cacheline is 64 bytes
+        //constexpr int cacheline_doubles = 8; // cacheline can take 8 doubles
+        
+        // Our working set uses n1 x d (n1 is rows) block of X requires d elements of mean
+        // Main advantage of this method is better ILP (more additions can occur without the dependency on mean[d] introduced by the expression mean[d]). Ignoring the precise history the miss rate of X and mean remains roughly the same. Unrolling factors (outer loop) can be tuned and number of accumulators (inner loop) depends on ceil(throughtput*latency of add) = 8 on SkyLake. Problem is that D may be 4 or 2, hence the residual (since D = 4 and 2 is common I may do a separate method for this case and use d+=2 instead of d+=8)
+        
+        
+        double* mean = (double*) calloc(D, sizeof(double));
+        if(mean == NULL) { printf("Memory allocation failed!\n"); exit(1); }
+        int nD = 0;
+        int n;
+        int limit1 = N-3;
+        int limit2 = D-7;
+        for(n = 0; n < limit1; n+=4) {
+            
+            int d;
+            for(d = 0; d < limit2; d+=8) {
+                
+                // Accessing in jumps of 4 reduces cache look-ups for mean[d] by a factor of 4
+                // Accessing mean[d+1], mean[d+2], ...  improves ILP by doing more adds per cycle
+                int center = nD+d;
+                double t = 0, t1 = 0, t2 = 0, t3 = 0, t4 = 0, t5 = 0, t6 = 0, t7 = 0;
+                
+                int c1 = center + D;
+                int c2 = center + D*2;
+                int c3 = center + D*3;
+                
+                t += X[center];
+                t1 +=  X[center + 1];
+                t2 +=  X[center + 2];
+                t3 +=  X[center + 3];
+                t4 +=  X[center + 4];
+                t5 +=  X[center + 5];
+                t6 +=  X[center + 6];
+                t7 +=  X[center + 7];
+                
+                
+                t += X[c1];
+                t1 +=  X[c1 + 1];
+                t2 +=  X[c1 + 2];
+                t3 +=  X[c1 + 3];
+                t4 +=  X[c1 + 4];
+                t5 +=  X[c1 + 5];
+                t6 +=  X[c1 + 6];
+                t7 +=  X[c1 + 7];
+                
+                t += X[c2];
+                t1 +=  X[c2 + 1];
+                t2 +=  X[c2 + 2];
+                t3 +=  X[c2 + 3];
+                t4 +=  X[c2 + 4];
+                t5 +=  X[c2 + 5];
+                t6 +=  X[c2 + 6];
+                t7 +=  X[c2 + 7];
+                
+                t += X[c3];
+                t1 +=  X[c3 + 1];
+                t2 +=  X[c3 + 2];
+                t3 +=  X[c3 + 3];
+                t4 +=  X[c3 + 4];
+                t5 +=  X[c3 + 5];
+                t6 +=  X[c3 + 6];
+                t7 +=  X[c3 + 7];
+                
+                mean[d] += t;
+                mean[d+1] += t1;
+                mean[d+2] += t2;
+                mean[d+3] += t3;
+                mean[d+4] += t4;
+                mean[d+5] += t5;
+                mean[d+6] += t6;
+                mean[d+7] += t7;
+                
+            }
+           
+            
+            // The residual
+            for (; d < D; d++){
+                mean[d] += (X[nD + d] + X[nD + d + D] +X[nD + d + 2*D] + X[nD + d + 3*D]);
+            }
+            
+            nD += (4*D);
+        }
+        
+        // The residual
+        for (; n < N; n++){
+            for (int d = 0; d < D; ++d){
+                mean[d] += X[nD+d];
+            }
+            nD += D;
+        }
+        
+        double cast_n = (double)N;
+        
+        // I think its best to keep division separate for numeric stability (i.e avoid "zeroing out")
+        for(int d = 0; d < D; d++) {
+            mean[d] /= cast_n;
+        }
+
+        // Subtract data mean
+        nD = 0;
+        
+        // For this computation some cache lookups can be spared by unrolling n by 4
+        for(n = 0; n < limit1; n+=4) {
+            for(int d = 0; d < D; d++) {
+                double temp = mean[d];
+                int center = nD+d;
+                X[center] -= temp;
+                X[center + D] -= temp;
+                X[center + 2*D] -= temp;
+                X[center + 3*D] -= temp;
+            }
+            nD += (4*D);
+        }
+        
+        // residual
+        for (; n < N; ++n){
+            for (int d = 0; d < D; ++d){
+                X[nD+d] -= mean[d];
+            }
+            nD += D;
+        }
+        
+        free(mean); mean = NULL;
+
+    }
+}

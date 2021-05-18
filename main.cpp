@@ -6,12 +6,14 @@
 #include "kernels/computeGP.hpp"
 #include "kernels/updateGradient.hpp"
 #include "kernels/zeroMean.hpp"
+#include "kernels/updateGradient_zeroMean.hpp"
 #include "parameters.hpp"
 #include "utility.hpp"
 
 using namespace computeGPv1;
-using namespace updateGradientv3;
+using namespace updateGradientv3_2_outdim;
 using namespace zeroMeanv1;
+using namespace updateGradient_zeroMeanv4_d2;
 
 int main(int argc, char** argv) {
     // double* X     = (double*) malloc(N * in_dim  * sizeof(double));
@@ -31,9 +33,9 @@ int main(int argc, char** argv) {
     
     // initialization
     srand(random_seed);
-    for(int i = 0; i < N * out_dim; i++)    uY[i] =  .0;
+    for(int i = 0; i < N * out_dim; i++)    uY[i] =  0.0;
     for(int i = 0; i < N * out_dim; i++) gains[i] = 1.0;
-    for(int i = 0; i < N * out_dim; i++)     Y[i] = randn() * .0001;
+    for(int i = 0; i < N * out_dim; i++)     Y[i] = randn() * 0.0001;
 
     load_data(X);
 
@@ -53,8 +55,9 @@ int main(int argc, char** argv) {
 
     // Training
     for(int iter = 0; iter < first_phase_iter; iter++) {
-        updateGradient(P, Y, N, out_dim, dY, uY, gains, momentum, eta); // compute gradient and upgrade
-        zeroMean(Y, N, out_dim);
+        updateGradient_zeroMean(P, Y, N, out_dim, dY, uY, gains, momentum, eta);
+        //updateGradient(P, Y, N, out_dim, dY, uY, gains, momentum, eta); // compute gradient and upgrade
+        //zeroMean(Y, N, out_dim);
         if (iter > 0 && (iter % 50 == 0 || iter == max_iter - 1)) {
             double C = .0;
             C = evaluateError(P, Y, N, out_dim);
@@ -66,8 +69,9 @@ int main(int argc, char** argv) {
     for(int i = 0; i < N * N; i++)  P[i] /= 12.0;
 
     for(int iter = 0; iter < second_phase_iter; iter++) {
-        updateGradient(P, Y, N, out_dim, dY, uY, gains, final_momentum, eta);
-        zeroMean(Y, N, out_dim);
+        updateGradient_zeroMean(P, Y, N, out_dim, dY, uY, gains, final_momentum, eta);
+        //updateGradient(P, Y, N, out_dim, dY, uY, gains, final_momentum, eta);
+        //zeroMean(Y, N, out_dim);
         if (iter > 0 && (iter % 50 == 0 || iter == max_iter - 1)) {
             double C = .0;
             C = evaluateError(P, Y, N, out_dim);

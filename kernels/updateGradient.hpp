@@ -3,16 +3,20 @@
 
 #include <immintrin.h>
 
+//Does values will also be used for "updateGradient_zeroMean.hpp"
 const __m256d zero_vec = _mm256_setzero_pd();
 const __m256d one_vec  = _mm256_set1_pd(1.0);
 const __m256d none_vec = _mm256_set1_pd(-1.0);
+const __m256d zz1_vec  = _mm256_set1_pd(0.01);
+const __m256d z8_vec   = _mm256_set1_pd(0.8);
+const __m256d z2_vec   = _mm256_set1_pd(0.2);
 
 /// return the sign of the a double, 0 if x = 0, x/abs(x) otherwise
-static inline double sign(double x) {
+static inline double sign(const double& x) {
     return (x == .0 ? .0 : (x < .0 ? -1.0 : 1.0));
 }
 
-static inline __m256d sign(__m256d x) {
+static inline __m256d sign(const __m256d& x) {
     
     __m256d out_vec, zero_cmp, gt_cmp;
     zero_cmp = _mm256_cmp_pd(x, zero_vec, _CMP_EQ_OQ);
@@ -23,7 +27,7 @@ static inline __m256d sign(__m256d x) {
 }
 
 //why check for 0.0 even if it is very uncommon?
-static inline __m256d sign_fast(__m256d x) {
+static inline __m256d sign_fast(const __m256d& x) {
     return _mm256_cmp_pd(x, zero_vec, _CMP_GT_OQ);
 }
 
@@ -40,6 +44,7 @@ static inline __m256d sign_fast(__m256d x) {
  * @param eta learning rate
  */
 
+//standart version
 namespace updateGradientv1 {
     
     inline void updateGradient(const double* P, double* Y, int N, int out_dim, double* dY, 
@@ -99,8 +104,8 @@ namespace updateGradientv1 {
     }
 }
 
-
-namespace updateGradientv2 {
+//scalar optimization with ILP for all types of out_dim
+namespace updateGradientv2_x_outdim {
     
     inline void updateGradient(const double* P, double* Y, int N, int out_dim, double* dY, 
                                 double* uY, double* gains, const double momentum, const double eta) {
@@ -117,15 +122,32 @@ namespace updateGradientv2 {
         double* Q = (double*) malloc(N * N * sizeof(double));
         if(Q == NULL) { printf("Memory allocation failed!\n"); exit(1); }
 
-        double sum_Q = 0.0;
+        double sum_Q1 = 0.0;
+        double sum_Q2 = 0.0;
+        double sum_Q3 = 0.0;
+        double sum_Q4 = 0.0;
 
-
+        int n;
         const int N2 = N*N;
-        for(int n = 0; n < N2; ++n) {
+        for(n = 0; n < N2; n += 4) {
             Q[n] = 1.0 / (1.0 + DD[n]);
-            sum_Q += Q[n];
+            Q[n + 1] = 1.0 / (1.0 + DD[n + 1]);
+            Q[n + 2] = 1.0 / (1.0 + DD[n + 2]);
+            Q[n + 3] = 1.0 / (1.0 + DD[n + 3]);
+
+            sum_Q1 += Q[n];
+            sum_Q2 += Q[n + 1];
+            sum_Q3 += Q[n + 2];
+            sum_Q4 += Q[n + 3];
         }
-        const double sum_Q_inv = 1.0 / (sum_Q - double(N));
+        for(; n < N2; ++n) {
+            Q[n] = 1.0 / (1.0 + DD[n]);
+            sum_Q1 += Q[n];
+        }
+        sum_Q1 = sum_Q1 + sum_Q2;
+        sum_Q3 = sum_Q3 + sum_Q4;
+
+        const double sum_Q_inv = 1.0 / (sum_Q1 + sum_Q3 - double(N));
         
 
 
@@ -133,7 +155,7 @@ namespace updateGradientv2 {
         int nN = 0;
         int mD;
         int nD = 0;
-        for(int n = 0; n < N; ++n) {
+        for(n = 0; n < N; ++n) {
             mD = 0;
             for(int m = 0; m < N; ++m) {
                 if(n != m) {
@@ -152,22 +174,39 @@ namespace updateGradientv2 {
         free(DD); DD = NULL;
         free(Q);  Q  = NULL;
 
-        /*
-        for(int i = 0; i < N * out_dim; ++i){
-            gains[i] = (sign(dY[i]) != sign(uY[i])) ? (gains[i] + 0.2) : (gains[i] * 0.8);
-            if(gains[i] < 0.01) gains[i] = 0.01;
+        int i;
+        double gains1_, gains2_, gains3_, gains4_;
+        for(i = 0; i < N * out_dim; i += 4){
+            gains1_ = gains[i];
+            gains2_ = gains[i + 1];
+            gains3_ = gains[i + 2];
+            gains4_ = gains[i + 3];
 
-            uY[i] = momentum * uY[i] - eta * gains[i] * dY[i];
-            Y[i] = Y[i] + uY[i];
+            gains1_ = (sign(dY[i]) != sign(uY[i])) ? (gains1_ + 0.2) : (gains1_ * 0.8);
+            gains2_ = (sign(dY[i + 1]) != sign(uY[i + 1])) ? (gains2_ + 0.2) : (gains2_ * 0.8);
+            gains3_ = (sign(dY[i + 2]) != sign(uY[i + 2])) ? (gains3_ + 0.2) : (gains3_ * 0.8);
+            gains4_ = (sign(dY[i + 3]) != sign(uY[i + 3])) ? (gains4_ + 0.2) : (gains4_ * 0.8);
+
+            gains[i]     = gains1_ < 0.01 ? 0.01 : gains1_;
+            gains[i + 1] = gains2_ < 0.01 ? 0.01 : gains2_;
+            gains[i + 2] = gains3_ < 0.01 ? 0.01 : gains3_;
+            gains[i + 3] = gains4_ < 0.01 ? 0.01 : gains4_;
+
+            uY[i]     = momentum * uY[i]     - eta * gains[i]     * dY[i];
+            uY[i + 1] = momentum * uY[i + 1] - eta * gains[i + 1] * dY[i + 1];
+            uY[i + 2] = momentum * uY[i + 2] - eta * gains[i + 2] * dY[i + 2];
+            uY[i + 3] = momentum * uY[i + 3] - eta * gains[i + 3] * dY[i + 3];
+
+
+            Y[i]     = Y[i] + uY[i];
+            Y[i + 1] = Y[i + 1] + uY[i + 1];
+            Y[i + 2] = Y[i + 2] + uY[i + 2];
+            Y[i + 3] = Y[i + 3] + uY[i + 3];
         }
-        */
-
-        
-        double gains_;
-        for(int i = 0; i < N * out_dim; ++i){
-            gains_ = gains[i];
-            gains_ = (sign(dY[i]) != sign(uY[i])) ? (gains_ + 0.2) : (gains_ * 0.8);
-            gains[i] = gains_ < 0.01 ? 0.01 : gains_;
+        for(; i < N * out_dim; ++i){
+            gains1_ = gains[i];
+            gains1_ = (sign(dY[i]) != sign(uY[i])) ? (gains1_ + 0.2) : (gains1_ * 0.8);
+            gains[i] = gains1_ < 0.01 ? 0.01 : gains1_;
 
             uY[i] = momentum * uY[i] - eta * gains[i] * dY[i];
             Y[i] = Y[i] + uY[i];
@@ -176,7 +215,7 @@ namespace updateGradientv2 {
     }
 }
 
-
+//scalar optimization with ILP for out_dim = 2
 namespace updateGradientv2_2_outdim {
     
     inline void updateGradient(const double* P, double* Y, int N, int out_dim, double* dY, 
@@ -191,33 +230,50 @@ namespace updateGradientv2_2_outdim {
         double* Q = (double*) malloc(N * N * sizeof(double));
         if(Q == NULL) { printf("Memory allocation failed!\n"); exit(1); }
 
-        double sum_Q = 0.0;
+        double sum_Q1 = 0.0;
+        double sum_Q2 = 0.0;
+        double sum_Q3 = 0.0;
+        double sum_Q4 = 0.0;
 
-
+        int n;
         const int N2 = N*N;
-        for(int n = 0; n < N2; ++n) {
+        for(n = 0; n < N2; n += 4) {
             Q[n] = 1.0 / (1.0 + DD[n]);
-            sum_Q += Q[n];
+            Q[n + 1] = 1.0 / (1.0 + DD[n + 1]);
+            Q[n + 2] = 1.0 / (1.0 + DD[n + 2]);
+            Q[n + 3] = 1.0 / (1.0 + DD[n + 3]);
+
+            sum_Q1 += Q[n];
+            sum_Q2 += Q[n + 1];
+            sum_Q3 += Q[n + 2];
+            sum_Q4 += Q[n + 3];
         }
+        for(; n < N2; ++n) {
+            Q[n] = 1.0 / (1.0 + DD[n]);
+            sum_Q1 += Q[n];
+        }
+        sum_Q1 = sum_Q1 + sum_Q2;
+        sum_Q3 = sum_Q3 + sum_Q4;
+
+        const double sum_Q_inv = 1.0 / (sum_Q1 + sum_Q3 - double(N));
 
         // Perform the computation of the gradient
-        const double sum_Q_inv = 1.0 / (sum_Q - double(N));
-        double dY0, dY1;
+        double dY0, dY1, mult0, mult1, mult2, mult3;
 
         int nN = 0;
         int m, mD;
         int nD = 0;
-        for(int n = 0; n < N; ++n) {
+        for(n = 0; n < N; ++n) {
             mD = 0;
             dY0 = 0.0;
             dY1 = 0.0;
 
             for(m = 0; m < N; m += 4) {
                 
-                double mult0 = (P[nN + m] - (Q[nN + m] * sum_Q_inv)) * Q[nN + m];
-                double mult1 = (P[nN + m + 1] - (Q[nN + m + 1] * sum_Q_inv)) * Q[nN + m + 1];
-                double mult2 = (P[nN + m + 2] - (Q[nN + m + 2] * sum_Q_inv)) * Q[nN + m + 2];
-                double mult3 = (P[nN + m + 3] - (Q[nN + m + 3] * sum_Q_inv)) * Q[nN + m + 3];
+                mult0 = (P[nN + m] - (Q[nN + m] * sum_Q_inv)) * Q[nN + m];
+                mult1 = (P[nN + m + 1] - (Q[nN + m + 1] * sum_Q_inv)) * Q[nN + m + 1];
+                mult2 = (P[nN + m + 2] - (Q[nN + m + 2] * sum_Q_inv)) * Q[nN + m + 2];
+                mult3 = (P[nN + m + 3] - (Q[nN + m + 3] * sum_Q_inv)) * Q[nN + m + 3];
 
                 dY0 += (Y[nD    ] - Y[mD    ]) * mult0;
                 dY0 += (Y[nD    ] - Y[mD + 2    ]) * mult1;
@@ -254,31 +310,47 @@ namespace updateGradientv2_2_outdim {
         free(DD); DD = NULL;
         free(Q);  Q  = NULL;
 
-        /*
-        for(int i = 0; i < N * out_dim; ++i){
-            gains[i] = (sign(dY[i]) != sign(uY[i])) ? (gains[i] + 0.2) : (gains[i] * 0.8);
-            if(gains[i] < 0.01) gains[i] = 0.01;
+        int i;
+        double gains1_, gains2_, gains3_, gains4_;
+        for(i = 0; i < N * out_dim; i += 4){
+            gains1_ = gains[i];
+            gains2_ = gains[i + 1];
+            gains3_ = gains[i + 2];
+            gains4_ = gains[i + 3];
+
+            gains1_ = (sign(dY[i]) != sign(uY[i])) ? (gains1_ + 0.2) : (gains1_ * 0.8);
+            gains2_ = (sign(dY[i + 1]) != sign(uY[i + 1])) ? (gains2_ + 0.2) : (gains2_ * 0.8);
+            gains3_ = (sign(dY[i + 2]) != sign(uY[i + 2])) ? (gains3_ + 0.2) : (gains3_ * 0.8);
+            gains4_ = (sign(dY[i + 3]) != sign(uY[i + 3])) ? (gains4_ + 0.2) : (gains4_ * 0.8);
+
+            gains[i]     = gains1_ < 0.01 ? 0.01 : gains1_;
+            gains[i + 1] = gains2_ < 0.01 ? 0.01 : gains2_;
+            gains[i + 2] = gains3_ < 0.01 ? 0.01 : gains3_;
+            gains[i + 3] = gains4_ < 0.01 ? 0.01 : gains4_;
+
+            uY[i]     = momentum * uY[i]     - eta * gains[i]     * dY[i];
+            uY[i + 1] = momentum * uY[i + 1] - eta * gains[i + 1] * dY[i + 1];
+            uY[i + 2] = momentum * uY[i + 2] - eta * gains[i + 2] * dY[i + 2];
+            uY[i + 3] = momentum * uY[i + 3] - eta * gains[i + 3] * dY[i + 3];
+
+
+            Y[i]     = Y[i] + uY[i];
+            Y[i + 1] = Y[i + 1] + uY[i + 1];
+            Y[i + 2] = Y[i + 2] + uY[i + 2];
+            Y[i + 3] = Y[i + 3] + uY[i + 3];
+        }
+        for(; i < N * out_dim; ++i){
+            gains1_ = gains[i];
+            gains1_ = (sign(dY[i]) != sign(uY[i])) ? (gains1_ + 0.2) : (gains1_ * 0.8);
+            gains[i] = gains1_ < 0.01 ? 0.01 : gains1_;
 
             uY[i] = momentum * uY[i] - eta * gains[i] * dY[i];
             Y[i] = Y[i] + uY[i];
         }
-        */
-
-        
-        double gains_;
-        for(int i = 0; i < N * out_dim; ++i){
-            gains_ = gains[i];
-            gains_ = (sign(dY[i]) != sign(uY[i])) ? (gains_ + 0.2) : (gains_ * 0.8);
-            gains[i] = gains_ < 0.01 ? 0.01 : gains_;
-
-            uY[i] = momentum * uY[i] - eta * gains[i] * dY[i];
-            Y[i] = Y[i] + uY[i];
-        }
-        
     }
 }
 
-
+//AVX for out_dim = x
 namespace updateGradientv3_x_outdim {
     
     inline void updateGradient(const double* P, double* Y, int N, int out_dim, double* dY, 
@@ -346,9 +418,6 @@ namespace updateGradientv3_x_outdim {
         free(Q);  Q  = NULL;
 
 
-        const __m256d zz1_vec  = _mm256_set1_pd(0.01);
-        const __m256d z8_vec   = _mm256_set1_pd(0.8);
-        const __m256d z2_vec   = _mm256_set1_pd(0.2);
         const __m256d eta_vec  = _mm256_set1_pd(eta);
         const __m256d mom_vec  = _mm256_set1_pd(momentum);
         __m256d gain_vec, dY_vec, Y_vec, uY_vec, sign_dY_vec, sign_uY_vec, gain_cmp, eta_dY_vec;
@@ -386,7 +455,7 @@ namespace updateGradientv3_x_outdim {
     }
 }
 
-
+//AVX for out_dim = 2
 namespace updateGradientv3_2_outdim {
     
     inline void updateGradient(const double* P, double* Y, int N, int out_dim, double* dY, 
@@ -411,7 +480,7 @@ namespace updateGradientv3_2_outdim {
             DD_vec = _mm256_load_pd(DD + i);
             DD_vec = _mm256_add_pd(one_vec, DD_vec);
             Q_vec  = _mm256_div_pd(one_vec, DD_vec);
-            
+
             _mm256_store_pd(Q + i, Q_vec);
 
             sum_Q_vec = _mm256_hadd_pd(Q_vec, Q_vec);
@@ -493,9 +562,6 @@ namespace updateGradientv3_2_outdim {
         free(Q);  Q  = NULL;
 
 
-        const __m256d zz1_vec  = _mm256_set1_pd(0.01);
-        const __m256d z8_vec   = _mm256_set1_pd(0.8);
-        const __m256d z2_vec   = _mm256_set1_pd(0.2);
         const __m256d eta_vec  = _mm256_set1_pd(eta);
         const __m256d mom_vec  = _mm256_set1_pd(momentum);
         __m256d gain_vec, dY_vec, Y_vec, uY_vec, sign_dY_vec, sign_uY_vec, gain_cmp, eta_dY_vec;

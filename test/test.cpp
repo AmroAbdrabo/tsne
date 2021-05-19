@@ -10,7 +10,7 @@ using namespace computeGPv1;
 using namespace updateGradientv3_2_outdim;
 using namespace zeroMeanv1;
 using namespace computeSEDv1;
-using namespace updateGradient_zeroMeanv3_d2;
+using namespace updateGradient_zeroMeanv5_d2;
 
 void usage() {
     cout << "[Usage] ./test <kernel_name1> <kernel_name2> ...\n";

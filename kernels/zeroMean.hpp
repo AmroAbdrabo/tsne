@@ -40,6 +40,36 @@ namespace zeroMeanv1 {
     }
 }
 
+//Noah D = 2 fixed
+namespace zeroMeanv1_d2 {
+    inline void zeroMean(double* X, int N, int D) {
+        // Compute data mean
+        double* mean = (double*) calloc(D, sizeof(double));
+        if(mean == NULL) { printf("Memory allocation failed!\n"); exit(1); }
+        int nD = 0;
+        for(int n = 0; n < N; n++) {
+            mean[0] += X[nD];
+            mean[1] += X[nD+1];
+            nD += D;
+        }
+
+        mean[0] /= (double) N;
+        mean[1] /= (double) N;
+
+
+        // Subtract data mean
+        nD = 0;
+        for(int n = 0; n < N; n++) {
+
+            X[nD] -= mean[0];
+            X[nD+1] -= mean[1];
+
+            nD += D;
+        }
+        free(mean); mean = NULL;
+    }
+}
+
 
 namespace zeroMeanv2 { // scalar replacement
     constexpr int cacheline = 64; // cacheline is 64 bytes

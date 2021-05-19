@@ -13,7 +13,7 @@ const __m256d z2_vec   = _mm256_set1_pd(0.2);
 
 /// return the sign of the a double, 0 if x = 0, x/abs(x) otherwise
 static inline double sign(const double& x) {
-    return (x == .0 ? .0 : (x < .0 ? -1.0 : 1.0));
+    return (x == 0.0 ? 0.0 : (x < 0.0 ? -1.0 : 1.0));
 }
 
 static inline __m256d sign(const __m256d& x) {
@@ -341,7 +341,7 @@ namespace updateGradientv2_2_outdim {
             Y[i + 2] = Y[i + 2] + uY[i + 2];
             Y[i + 3] = Y[i + 3] + uY[i + 3];
         }
-        for(; i < ND; i += 2){
+        for(; i < ND; i += 2){      //we don't have to worry that ND is odd
             gains1_ = gains[i];
             gains2_ = gains[i+1];
 
@@ -549,7 +549,7 @@ namespace updateGradientv3_2_outdim {
                 Y_mD_vec1 = _mm256_permute4x64_pd(Y_mD_vec3, 0b11011000);
                 Y_mD_vec2 = _mm256_permute4x64_pd(Y_mD_vec4, 0b11011000);
 
-                dY_vec1 = _mm256_sub_pd(Y_mD_vec1, Y_nD_vec1);
+                dY_vec1 = _mm256_sub_pd(Y_mD_vec1, Y_nD_vec1);      //normally this is Y[nD] - Y[mD] but because of -mult we switch this aswell
                 dY_vec2 = _mm256_sub_pd(Y_mD_vec2, Y_nD_vec2);
 
                 dY_vec1 = _mm256_mul_pd(dY_vec1, mult_vec);

@@ -13,7 +13,7 @@
 using namespace computeGPv1;
 using namespace updateGradientv3_2_outdim;
 using namespace zeroMeanv1;
-using namespace updateGradient_zeroMeanv4_d2;
+using namespace updateGradient_zeroMeanv5_d2;
 
 int main(int argc, char** argv) {
     // double* X     = (double*) malloc(N * in_dim  * sizeof(double));

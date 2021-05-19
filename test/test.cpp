@@ -10,7 +10,7 @@ using namespace computeGPv1;
 using namespace updateGradientv3_2_outdim;
 using namespace zeroMeanv1;
 using namespace computeSEDv1;
-using namespace updateGradient_zeroMeanv4_d2;
+using namespace updateGradient_zeroMeanv3_d2;
 
 void usage() {
     cout << "[Usage] ./test <kernel_name1> <kernel_name2> ...\n";
@@ -40,7 +40,7 @@ int main(int argc, char** argv) {
         else if(to_test == "computesed") {
             test = new Test_ComputeSED(computeSquaredEuclideanDistance);
         }
-        else if(to_test == "upgradient_zeromean"){
+        else if(to_test == "updgradient_zeromean"){
             test = new Test_UpdGradient_ZeroMean(updateGradient_zeroMean);
         }
         else {

@@ -355,7 +355,7 @@ namespace computeSEDv2d2ruvec{ // with blocking for cache AND register w unrolli
                         d256 yvecd0 = _mm256_set1_pd(Xjj[0]);
                         d256 yvecd1 = _mm256_set1_pd(Xjj[1]);
 
-                       d256 xyd0  = _mm256_sub_pd(xvecd0, yvecd0);
+                        d256 xyd0  = _mm256_sub_pd(xvecd0, yvecd0);
                         d256 xyd1  = _mm256_sub_pd(xvecd1, yvecd1);
 
                         xyd0 = _mm256_mul_pd(xyd0, xyd0);

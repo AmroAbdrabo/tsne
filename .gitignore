@@ -5,3 +5,4 @@ output.txt
 cachegrind*
 *.s
 *.o
+profile.dSYM/

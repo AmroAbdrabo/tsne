@@ -20,13 +20,14 @@ namespace computeSEDv1{
             *curr_elem = 0.0; // DD[n,n] = 0
             double* curr_elem_sym = curr_elem + N; // DD[n+1,n] = dist(point[n], point[n+1])
             for(int m = n + 1; m < N; ++m, XmD+=D, curr_elem_sym+=N) {
-                *(++curr_elem) = 0.0;
-                for(int d = 0; d < D; ++d) {
-                    *curr_elem += (XnD[d] - XmD[d]) * (XnD[d] - XmD[d]); // DD[n,m] = dist(point[n], point[m])
-                }
-                // double tmp1 = XnD[0] - XmD[0];
-                // double tmp2 = XnD[1] - XmD[1];
-                // *curr_elem += tmp1 * tmp1 + tmp2 * tmp2;
+                // *(++curr_elem) = 0.0;
+                // for(int d = 0; d < D; ++d) {
+                //     *curr_elem += (XnD[d] - XmD[d]) * (XnD[d] - XmD[d]); // DD[n,m] = dist(point[n], point[m])
+                // }
+                 double tmp1 = XnD[0] - XmD[0];
+                 double tmp2 = XnD[1] - XmD[1];
+                 
+                 *(++curr_elem) = tmp1 * tmp1 + tmp2 * tmp2;
 
                 *curr_elem_sym = *curr_elem; // DD[m,n] = DD[n,m]
             }
@@ -36,29 +37,53 @@ namespace computeSEDv1{
 
 namespace computeSEDv2d2{ // with blocking
     void computeSquaredEuclideanDistance(const double* X, int N,  int D, double* DD) {
-       const int b = 16; // block size for cache
+       const int b = 32; // block size for cache
 
-       for(int i = 0; i < N - b + 1; i += b) {
-           const double* Xi = X + i * D;
-           for(int j = i; j < N - b + 1; j += b) {
+        const double* Xi = X;
+       for(int i = 0; i < N - b + 1; i += b, Xi += b * D) {
+            const double* Xj = X + i * D;
+           for(int j = i; j < N - b + 1; j += b, Xj += b * D) {
                const double* Xii = Xi;
-               const double* Xj = X + j * D;
+               if(i == j) {
+                   for(int ii = i; ii < i + b; ii++, Xii += D) {
+                        const double* Xjj = Xj;
+                        double xii0 = Xii[0], xii1 = Xii[1];
+                        int base = ii * N;
+                        for(int jj = j; jj < j + b; jj++, Xjj += D) {
+                                if(ii == jj) {
+                                    // DD[base + jj] = 0.0;
+                                    DD[base + jj] = 0.0;
+                                    continue;
+                                }
+
+                                double tmp1 = xii0 - Xjj[0];
+                                double tmp2 = xii1 - Xjj[1];
+                                double dist = tmp1 * tmp1 + tmp2 * tmp2;
+                                
+                                DD[base + jj] = dist;
+                        }
+                    }
+                    continue;
+               }
+
                for(int ii = i; ii < i + b; ii++, Xii += D) {
                    const double* Xjj = Xj;
+                   double xii0 = Xii[0], xii1 = Xii[1];
+                   int base = ii * N;
                    for(int jj = j; jj < j + b; jj++, Xjj += D) {
 
                         // compute distance
                         if(ii == jj) {
-                            DD[ii * N + jj] = 0.0;
+                            DD[base + jj] = 0.0;
                             continue;
                         }
 
                         // for dim = 2
-                        double tmp1 = Xii[0] - Xjj[0];
-                        double tmp2 = Xii[1] - Xjj[1];
+                        double tmp1 = xii0 - Xjj[0];
+                        double tmp2 = xii1 - Xjj[1];
                         double dist = tmp1 * tmp1 + tmp2 * tmp2;
                         
-                        DD[ii * N + jj] = dist;
+                        DD[base + jj] = dist;
                         DD[jj * N + ii] = dist;
                    }
                }
@@ -67,17 +92,100 @@ namespace computeSEDv2d2{ // with blocking
     }
 }
 
-namespace computeSEDv2d2ru{ // with blocking for cache AND register w unrolling
+namespace computeSEDv2d2buf{ // with blocking w buffering
     void computeSquaredEuclideanDistance(const double* X, int N,  int D, double* DD) {
-       const int b = 16; // block size for cache
+       const int b = 32; // block size for cache
+       double buf[b * b] __attribute__ ((aligned (32)));
+
+        const double* Xi = X;
+       for(int i = 0; i < N - b + 1; i += b, Xi += b * D) {
+            const double* Xj = X + i * D;
+           for(int j = i; j < N - b + 1; j += b, Xj += b * D) {
+               const double* Xii = Xi;
+               if(i == j) { // diagonal block
+                    for(int ii = i; ii < i + b; ii++, Xii += D) {
+                        const double* Xjj = Xj;
+                        double xii0 = Xii[0], xii1 = Xii[1];
+                        int base = ii * N;
+                        for(int jj = j; jj < j + b; jj++, Xjj += D) {
+                                if(ii == jj) {
+                                    // DD[base + jj] = 0.0;
+                                    DD[base + jj] = 0.0;
+                                    continue;
+                                }
+
+                                double tmp1 = xii0 - Xjj[0];
+                                double tmp2 = xii1 - Xjj[1];
+                                double dist = tmp1 * tmp1 + tmp2 * tmp2;
+                                
+                                DD[base + jj] = dist;
+                        }
+                    }
+                    continue;
+               }
+
+               for(int ii = i; ii < i + b; ii++, Xii += D) {
+                   const double* Xjj = Xj;
+                   double xii0 = Xii[0], xii1 = Xii[1];
+                   int base = ii * N;
+                   int shift = ii - i;
+                   int buf_base = (ii - i) * b;
+                   for(int jj = j; jj < j + b; jj++, Xjj += D) {
+                        // for dim = 2
+                        double tmp1 = xii0 - Xjj[0];
+                        double tmp2 = xii1 - Xjj[1];
+                        double dist = tmp1 * tmp1 + tmp2 * tmp2;
+                        
+                        DD[base + jj] = dist;
+                        buf[(jj-j) * b + shift] = dist;
+                   }
+               }
+
+               // copy the buffer back to DD
+                for(int jj = j; jj < j + b; jj++) { 
+                    int base = jj * N;
+                    int buf_base = (jj - j) * b;
+                    for(int ii = i; ii < i + b; ii++) {
+                        DD[base + ii] = buf[buf_base + ii - i];
+                    }
+                }
+           }
+       }
+    }
+}
+
+namespace computeSEDv2d2ru{ // with blocking for cache AND register w unrolling wo buffering
+    void computeSquaredEuclideanDistance(const double* X, int N,  int D, double* DD) {
+       const int b = 32; // block size for cache
        const int rbi = 4; // block size for registers
-       const int rbj = 16; // block size for registers
 
         const double* Xi = X;
         for(int i = 0; i < N - b + 1; i += b, Xi += b * D) {
             const double* Xj = X + i * D;
             for(int j = i; j < N - b + 1; j += b, Xj += b * D) {
                 const double* Xii = Xi;
+                if(i == j) { // diagonal block
+                    for(int ii = i; ii < i + b; ii++, Xii += D) {
+                        const double* Xjj = Xj;
+                        double xii0 = Xii[0], xii1 = Xii[1];
+                        int base = ii * N;
+                        for(int jj = j; jj < j + b; jj++, Xjj += D) {
+                                if(ii == jj) {
+                                    // DD[base + jj] = 0.0;
+                                    DD[base + jj] = 0.0;
+                                    continue;
+                                }
+
+                                double tmp1 = xii0 - Xjj[0];
+                                double tmp2 = xii1 - Xjj[1];
+                                double dist = tmp1 * tmp1 + tmp2 * tmp2;
+                                
+                                DD[base + jj] = dist;
+                        }
+                    }
+                    continue;
+               }
+
                 for(int ii = i; ii < i + b - rbi + 1; ii += rbi, Xii += rbi * D) {
                     const double* Xjj = Xj;
 
@@ -88,44 +196,6 @@ namespace computeSEDv2d2ru{ // with blocking for cache AND register w unrolling
                     double x3d0 = Xii[6], x3d1 = Xii[7];
                     
                     for(int jj = j; jj < j + b - 1; jj += 2, Xjj += D * 2) {
-                        if(ii == jj) {
-                            DD[ii * N + jj] = 0.0;
-                            double tmp3, tmp4, ddist; // dynamic register renaming
-                            
-                            // stay in registers for reuse
-                            double yyd0 = Xjj[2];
-                            double yyd1 = Xjj[3];
-
-                            int bbase = ii * N + jj + 1; 
-                            int ssymm_base = jj * N + ii + N; 
-                            
-                            tmp3 = x0d0 - yyd0;
-                            tmp4 = x0d1 - yyd1;
-                            ddist = tmp3 * tmp3 + tmp4 * tmp4;
-                            DD[bbase] = ddist;
-                            DD[ssymm_base] = ddist;
-                            bbase += N;
-                            
-                            tmp3 = x1d0 - yyd0;
-                            tmp4 = x1d1 - yyd1;
-                            ddist = tmp3 * tmp3 + tmp4 * tmp4;
-                            DD[bbase] = ddist;
-                            DD[ssymm_base + 1] = ddist;
-                            bbase += N;
-
-                            tmp3 = x2d0 - yyd0;
-                            tmp4 = x2d1 - yyd1;
-                            ddist = tmp3 * tmp3 + tmp4 * tmp4;
-                            DD[bbase] = ddist;
-                            DD[ssymm_base + 2] = ddist;
-                            bbase += N;
-
-                            tmp3 = x3d0 - yyd0;
-                            tmp4 = x3d1 - yyd1;
-                            ddist = tmp3 * tmp3 + tmp4 * tmp4;
-                            DD[bbase] = ddist;
-                            DD[ssymm_base + 3] = ddist;
-                        } else { 
                             double tmp1, tmp2, dist, tmp3, tmp4, ddist; // dynamic register renaming
                             
                             // stay in registers for reuse
@@ -188,8 +258,6 @@ namespace computeSEDv2d2ru{ // with blocking for cache AND register w unrolling
                             DD[symm_base + 3] = dist;
                             DD[bbase] = ddist;
                             DD[ssymm_base + 3] = ddist;
-                        }
-                        
                     }
                 }
             }
@@ -323,6 +391,128 @@ namespace computeSEDv2d2ru{ // with blocking for cache AND register w unrolling
     }
 }
 
+namespace computeSEDv2d2rubuf{ // with blocking for cache AND register w unrolling w buffering
+    void computeSquaredEuclideanDistance(const double* X, int N,  int D, double* DD) {
+       const int b = 32; // block size for cache
+       const int rbi = 4; // block size for registers
+       double buf[b * b] __attribute__ ((aligned (32)));
+
+
+        const double* Xi = X;
+        for(int i = 0; i < N - b + 1; i += b, Xi += b * D) {
+            const double* Xj = X + i * D;
+            for(int j = i; j < N - b + 1; j += b, Xj += b * D) {
+                const double* Xii = Xi;
+                if(i == j) { // diagonal block
+                    for(int ii = i; ii < i + b; ii++, Xii += D) {
+                        const double* Xjj = Xj;
+                        double xii0 = Xii[0], xii1 = Xii[1];
+                        int base = ii * N;
+                        for(int jj = j; jj < j + b; jj++, Xjj += D) {
+                                if(ii == jj) {
+                                    // DD[base + jj] = 0.0;
+                                    DD[base + jj] = 0.0;
+                                    continue;
+                                }
+
+                                double tmp1 = xii0 - Xjj[0];
+                                double tmp2 = xii1 - Xjj[1];
+                                double dist = tmp1 * tmp1 + tmp2 * tmp2;
+                                
+                                DD[base + jj] = dist;
+                        }
+                    }
+                    continue;
+               }
+
+                for(int ii = i; ii < i + b - rbi + 1; ii += rbi, Xii += rbi * D) {
+                    const double* Xjj = Xj;
+
+                    // stay in registers for reuse
+                    double x0d0 = Xii[0], x0d1 = Xii[1];
+                    double x1d0 = Xii[2], x1d1 = Xii[3];
+                    double x2d0 = Xii[4], x2d1 = Xii[5];
+                    double x3d0 = Xii[6], x3d1 = Xii[7];
+                    
+                    for(int jj = j; jj < j + b - 1; jj += 2, Xjj += D * 2) {
+                            double tmp1, tmp2, dist, tmp3, tmp4, ddist; // dynamic register renaming
+                            
+                            // stay in registers for reuse
+                            double yd0 = Xjj[0];
+                            double yd1 = Xjj[1];
+                            double yyd0 = Xjj[2];
+                            double yyd1 = Xjj[3];
+
+                            int base = ii * N + jj;
+                            int buf_base = (jj-j) * b + ii - i;
+                            int bbase = base + 1; 
+                            int bbuf_base = buf_base + b; 
+                            
+                            tmp1 = x0d0 - yd0;
+                            tmp2 = x0d1 - yd1;
+                            tmp3 = x0d0 - yyd0;
+                            tmp4 = x0d1 - yyd1;
+                            dist = tmp1 * tmp1 + tmp2 * tmp2;
+                            ddist = tmp3 * tmp3 + tmp4 * tmp4;
+                            DD[base] = dist;
+                            buf[buf_base] = dist;
+                            DD[bbase] = ddist;
+                            buf[bbuf_base] = ddist;
+                            base += N;
+                            bbase += N;
+                            
+                            tmp1 = x1d0 - yd0;
+                            tmp2 = x1d1 - yd1;
+                            tmp3 = x1d0 - yyd0;
+                            tmp4 = x1d1 - yyd1;
+                            dist = tmp1 * tmp1 + tmp2 * tmp2;
+                            ddist = tmp3 * tmp3 + tmp4 * tmp4;
+                            DD[base] = dist;
+                            buf[buf_base + 1] = dist;
+                            DD[bbase] = ddist;
+                            buf[bbuf_base + 1] = ddist;
+                            base += N;
+                            bbase += N;
+
+                            tmp1 = x2d0 - yd0;
+                            tmp2 = x2d1 - yd1;
+                            tmp3 = x2d0 - yyd0;
+                            tmp4 = x2d1 - yyd1;
+                            dist = tmp1 * tmp1 + tmp2 * tmp2;
+                            ddist = tmp3 * tmp3 + tmp4 * tmp4;
+                            DD[base] = dist;
+                            buf[buf_base + 2] = dist;
+                            DD[bbase] = ddist;
+                            buf[bbuf_base + 2] = ddist;
+                            base += N;
+                            bbase += N;
+
+                            tmp1 = x3d0 - yd0;
+                            tmp2 = x3d1 - yd1;
+                            tmp3 = x3d0 - yyd0;
+                            tmp4 = x3d1 - yyd1;
+                            dist = tmp1 * tmp1 + tmp2 * tmp2;
+                            ddist = tmp3 * tmp3 + tmp4 * tmp4;
+                            DD[base] = dist;
+                            buf[buf_base + 3] = dist;
+                            DD[bbase] = ddist;
+                            buf[bbuf_base + 3] = ddist;
+                    }
+                }
+
+                // copy the buffer back to DD
+                for(int jj = j; jj < j + b; jj++) { 
+                    int base = jj * N;
+                    int buf_base = (jj - j) * b;
+                    for(int ii = i; ii < i + b; ii++) {
+                        DD[base + ii] = buf[buf_base + ii - i];
+                    }
+                }
+            }
+        }
+    }
+}
+
 namespace computeSEDv2d2ruvec{ // with blocking for cache AND register w unrolling
     typedef __m256d d256;
     void computeSquaredEuclideanDistance(const double* X, int N,  int D, double* DD) {
@@ -371,146 +561,6 @@ namespace computeSEDv2d2ruvec{ // with blocking for cache AND register w unrolli
                         DD[base] = DD[symm_base + 1]; base += N;
                         DD[base] = DD[symm_base + 2]; base += N;
                         DD[base] = DD[symm_base + 3];
-                    }
-                }
-            }
-        }
-    }
-}
-
-namespace computeSEDv2dx{ // with blocking, any dimension
-    void computeSquaredEuclideanDistance(const double* X, int N,  int D, double* DD) {
-       const int b = 16; // block size
-
-       for(int i = 0; i < N - b + 1; i += b) {
-           const double* Xi = X + i * D;
-           for(int j = i; j < N - b + 1; j += b) {
-               const double* Xii = Xi;
-               const double* Xj = X + j * D;
-               for(int ii = i; ii < i + b; ii++, Xii += D) {
-                   const double* Xjj = Xj;
-                   for(int jj = j; jj < j + b; jj++, Xjj += D) {
-
-                        // compute distance
-                        if(ii == jj) {
-                            DD[ii * N + jj] = 0.0;
-                            continue;
-                        }
-                       
-                        double dist = 0.0;
-
-                        // for general dimensions
-                       for(int d = 0; d < D; d++) {
-                           double tmp = Xii[d] - Xjj[d];
-                           dist += tmp * tmp;
-                       }
-                        
-                        DD[ii * N + jj] = dist;
-                        DD[jj * N + ii] = dist;
-                   }
-               }
-           }
-       }
-    }
-}
-namespace computeSEDv2d2r{ // with blocking for cache AND register wo unrolling
-    void computeSquaredEuclideanDistance(const double* X, int N,  int D, double* DD) {
-       const int b = 16; // block size for cache
-       const int rbi = 4; // block size for registers
-       const int rbj = 16; // block size for registers
-
-        const double* Xi = X;
-        for(int i = 0; i < N - b + 1; i += b, Xi += b * D) {
-            const double* Xj = X + i * D;
-            for(int j = i; j < N - b + 1; j += b, Xj += b * D) {
-                const double* Xii = Xi;
-                for(int ii = i; ii < i + b - rbi + 1; ii += rbi, Xii += rbi * D) {
-                    const double* Xjj = Xj;
-                    for(int jj = j; jj < j + b - rbj + 1; jj += rbj, Xjj += rbj * D) {
-                        const double* Xri = Xii;
-                        for(int ri = ii; ri < ii + rbi; ri++, Xri += D) {
-                            const double* Xrj = Xjj;
-                            for(int rj = jj; rj < jj + rbj; rj++, Xrj += D) {
-                                
-                                if(ri == rj) {
-                                    DD[ri * N + rj] = 0.0;
-                                    continue;
-                                }
-                                
-                                double tmp1 = Xri[0] - Xrj[0];
-                                double tmp2 = Xri[1] - Xrj[1];
-                                double dist = tmp1 * tmp1 + tmp2 * tmp2;
-                                    
-                                DD[ri * N + rj] = dist;
-                                DD[rj * N + ri] = dist;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-namespace computeSEDv2d2ru_depr{ // with blocking for cache AND register w unrolling
-    void computeSquaredEuclideanDistance(const double* X, int N,  int D, double* DD) {
-       const int b = 16; // block size for cache
-       const int rbi = 4; // block size for registers
-       const int rbj = 16; // block size for registers
-
-        const double* Xi = X;
-        for(int i = 0; i < N - b + 1; i += b, Xi += b * D) {
-            const double* Xj = X + i * D;
-            for(int j = i; j < N - b + 1; j += b, Xj += b * D) {
-                const double* Xii = Xi;
-                for(int ii = i; ii < i + b - rbi + 1; ii += rbi, Xii += rbi * D) {
-                    const double* Xjj = Xj;
-                    double x0d0 = Xii[0], x0d1 = Xii[1];
-                    double x1d0 = Xii[2], x1d1 = Xii[3];
-                    double x2d0 = Xii[4], x2d1 = Xii[5];
-                    double x3d0 = Xii[6], x3d1 = Xii[7];
-                    for(int jj = j; jj < j + b - rbj + 1; jj += rbj, Xjj += rbj * D) {
-                        const double* Xrj = Xjj;
-                        for(int rj = jj; rj < jj + rbj; rj++, Xrj += D) {
-                            
-                            if(ii == rj) {
-                                DD[ii * N + rj] = 0.0;
-                                continue;
-                            }
-
-                            int c = ii;
-                            
-                            double tmp1, tmp2, dist;
-                            
-                            double yd0 = Xrj[0];
-                            double yd1 = Xrj[1];
-                            
-                            tmp1 = x0d0 - yd0;
-                            tmp2 = x0d1 - yd1;
-                            dist = tmp1 * tmp1 + tmp2 * tmp2;
-                            DD[c * N + rj] = dist;
-                            DD[rj * N + c] = dist;
-                            c++;
-                            
-                            tmp1 = x1d0 - yd0;
-                            tmp2 = x1d1 - yd1;
-                            dist = tmp1 * tmp1 + tmp2 * tmp2;
-                            DD[c * N + rj] = dist;
-                            DD[rj * N + c] = dist;
-                            c++;
-
-                            tmp1 = x2d0 - yd0;
-                            tmp2 = x2d1 - yd1;
-                            dist = tmp1 * tmp1 + tmp2 * tmp2;
-                            DD[c * N + rj] = dist;
-                            DD[rj * N + c] = dist;
-                            c++;
-
-                            tmp1 = x3d0 - yd0;
-                            tmp2 = x3d1 - yd1;
-                            dist = tmp1 * tmp1 + tmp2 * tmp2;
-                            DD[c * N + rj] = dist;
-                            DD[rj * N + c] = dist;
-                        }
                     }
                 }
             }

@@ -8,8 +8,9 @@
 using namespace computeGPv1;
 using namespace updateGradientv3;
 using namespace zeroMeanv1;
-//using namespace computeSEDv2d2ru;
-using namespace computeSEDv1;
+ using namespace computeSEDv2d2rubuf;
+// using namespace computeSEDv2d2buf;
+ //using namespace computeSEDv1;
 
 void usage() {
     cout << "[Usage] ./test <kernel_name1> <kernel_name2> ...\n";
@@ -38,17 +39,19 @@ int main(int argc, char** argv) {
         }
         else if(to_test == "computesed") {
             test = new Test_ComputeSED(computeSquaredEuclideanDistance);
-            //std::vector<std::string> names {"Baseline", "Blocking", "Blocking++", "Vectorization"}; 
-            //std::vector<Test_ComputeSED::comp_func> func_to_test {
-                //computeSEDv1::computeSquaredEuclideanDistance,
-                //computeSEDv2d2::computeSquaredEuclideanDistance,
-                //computeSEDv2d2ru::computeSquaredEuclideanDistance,
-                //computeSEDv2d2ruvec::computeSquaredEuclideanDistance
-            //};
-            //std::vector<int> size_to_test {64, 128, 256, 512, 1024, 2048};
+            std::vector<std::string> names {"Baseline", "Mini-blocking", "Mini-blockingBuf", "Micro-blocking", "Micro-blockingBuf"}; 
+            std::vector<Test_ComputeSED::comp_func> func_to_test {
+                computeSEDv1::computeSquaredEuclideanDistance,
+                computeSEDv2d2::computeSquaredEuclideanDistance,
+                computeSEDv2d2buf::computeSquaredEuclideanDistance,
+                computeSEDv2d2ru::computeSquaredEuclideanDistance,
+                computeSEDv2d2rubuf::computeSquaredEuclideanDistance
+                // computeSEDv2d2ruvec::computeSquaredEuclideanDistance
+            };
+            std::vector<int> size_to_test {64, 128, 256, 512, 1024, 2048};
             //static_cast<Test_ComputeSED*>(test)->sweep_input_size();
-            //static_cast<Test_ComputeSED*>(test)->sweep(func_to_test, names, size_to_test);
-            static_cast<Test_ComputeSED*>(test)->sweep_block_size();
+            static_cast<Test_ComputeSED*>(test)->sweep(func_to_test, names, size_to_test);
+            //static_cast<Test_ComputeSED*>(test)->sweep_block_size();
         }
         else {
             cout << "Invalid kernel name!\n";
@@ -56,8 +59,8 @@ int main(int argc, char** argv) {
             exit(1);
         }
 
-        //test->validate();
-        //test->perf_test();
+        // test->validate();
+        // test->perf_test();
         free(test);
         test = nullptr;
     }

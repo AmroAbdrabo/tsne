@@ -6,3 +6,4 @@ cachegrind*
 *.s
 *.o
 profile.dSYM/
+profile

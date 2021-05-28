@@ -10,7 +10,7 @@ private:
     double X[N * in_dim] __attribute__ ((aligned (32)));
     double P[N * N]      __attribute__ ((aligned (32)));
     double baseP[N * N]  __attribute__ ((aligned (32)));
-    int perf_test_N = 32;
+    int perf_test_N = 64;
     int perf_test_indim = 16;
     typedef void(*comp_func)(const double*, const size_t, const unsigned int, double*, const double);
     comp_func func;

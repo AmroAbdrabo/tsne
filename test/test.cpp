@@ -5,7 +5,7 @@
 #include "test_computesed.hpp"
 
 /// plug in your implementation using corresponding namespaces
-using namespace computeGPv2;
+using namespace computeGPv3;
 using namespace updateGradientv3;
 using namespace zeroMeanv1;
 using namespace computeSEDv2;

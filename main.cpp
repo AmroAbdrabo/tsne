@@ -16,12 +16,13 @@ using namespace zeroMeanv1;
 
 int main(int argc, char** argv) {
     memory::Pool::allocate((in_dim + 4 * out_dim + N) * 1.1 * N * sizeof(double));
-    double* X     = (double*) memory::Pool::getMemory(N * in_dim);
-    double* Y     = (double*) memory::Pool::getMemory(N * out_dim);
-    double* dY    = (double*) memory::Pool::getMemory(N * out_dim);
-    double* uY    = (double*) memory::Pool::getMemory(N * out_dim);
-    double* gains = (double*) memory::Pool::getMemory(N * out_dim);
-    double* P     = (double*) memory::Pool::getMemory(N * N);
+
+    double* X     = (double*) memory::Pool::getMemory(N * in_dim * sizeof(double));
+    double* Y     = (double*) memory::Pool::getMemory(N * out_dim * sizeof(double));
+    double* dY    = (double*) memory::Pool::getMemory(N * out_dim * sizeof(double));
+    double* uY    = (double*) memory::Pool::getMemory(N * out_dim * sizeof(double));
+    double* gains = (double*) memory::Pool::getMemory(N * out_dim * sizeof(double));
+    double* P     = (double*) memory::Pool::getMemory(N * N * sizeof(double));
     if(dY == NULL || uY == NULL || gains == NULL || P == NULL) { printf("Memory allocation failed!\n"); exit(1); }
 
     // initialization

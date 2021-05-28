@@ -30,7 +30,7 @@ public:
     virtual void init_validate() {
         init();
     }
-    
+
     virtual void perf_test() {
         init_perf();
         double cycles = 0.;
@@ -42,20 +42,20 @@ public:
             num_runs = num_runs * multiplier;
             start = start_tsc();
             for (size_t i = 0; i < num_runs; i++) {
-                (*func)(X, perf_test_N, perf_test_indim, P, perp);      
+                (*func)(X, perf_test_N, perf_test_indim, P, perp);
             }
             end = stop_tsc(start);
 
             cycles = (double)end;
             multiplier = (CYCLES_REQUIRED) / (cycles);
-            
+
         } while (multiplier > 2);
 
         double total_cycles = 0;
         for (size_t j = 0; j < REP; j++) {
             start = start_tsc();
             for (size_t i = 0; i < num_runs; ++i) {
-                (*func)(X, perf_test_N, perf_test_indim, P, perp);      
+                (*func)(X, perf_test_N, perf_test_indim, P, perp);
             }
             end = stop_tsc(start);
 
@@ -65,8 +65,8 @@ public:
         cycles = total_cycles / REP;
         print_perf(cycles, num_runs);
     }
-    
-    virtual void validate() 
+
+    virtual void validate()
     {
         init_validate();
         double error = .0;
@@ -74,7 +74,7 @@ public:
         (*func)(X, N, in_dim, P, perp);
         computeGPv1::computeGaussianPerplexity(X, N, in_dim, baseP, perp);
         error = nrm_sqr_diff(P, baseP, N * N);
-        
+
         print_error(error);
     }
 
@@ -84,7 +84,7 @@ public:
         cout << "Input dimension   = \t" << perf_test_indim << endl;
         cout << "Repeat " << num_runs << " runs for " << REP << " times.\n";
         cout << "Avg cycles = " << cycles << endl;
-        cout << endl; 
+        cout << endl;
     }
 };
 

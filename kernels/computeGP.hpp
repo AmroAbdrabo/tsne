@@ -1,5 +1,6 @@
 #pragma once
 #include "computeSED.hpp"
+#include "memory/Pool.h"
 #include <cfloat>
 #include <stdio.h>
 #include <math.h>
@@ -16,9 +17,10 @@
  */
 
 namespace computeGPv1 {
-    
+
     inline void computeGaussianPerplexity(const double* X, const size_t N, const unsigned int in_dim, double* P, const double perp) {
         // Compute the squared Euclidean distance matrix
+
         double* DD = (double*) malloc(N * N * sizeof(double));
         if(DD == NULL) { printf("Memory allocation failed!\n"); exit(1); }
         computeSEDv1::computeSquaredEuclideanDistance(X, N, in_dim, DD);

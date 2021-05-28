@@ -8,20 +8,22 @@
 #include "kernels/zeroMean.hpp"
 #include "parameters.hpp"
 #include "utility.hpp"
+#include "memory/Pool.h"
 
 using namespace computeGPv1;
 using namespace updateGradientv3;
 using namespace zeroMeanv1;
 
 int main(int argc, char** argv) {
-    double* X     = (double*) malloc(N * in_dim  * sizeof(double));
-    double* Y     = (double*) malloc(N * out_dim * sizeof(double));
-    double* dY    = (double*) malloc(N * out_dim * sizeof(double));
-    double* uY    = (double*) malloc(N * out_dim * sizeof(double));
-    double* gains = (double*) malloc(N * out_dim * sizeof(double));
-    double* P     = (double*) malloc(N * N       * sizeof(double));
+    memory::Pool::allocate((in_dim + 4 * out_dim + N) * 1.1 * N * sizeof(double));
+    double* X     = (double*) memory::Pool::getMemory(N * in_dim);
+    double* Y     = (double*) memory::Pool::getMemory(N * out_dim);
+    double* dY    = (double*) memory::Pool::getMemory(N * out_dim);
+    double* uY    = (double*) memory::Pool::getMemory(N * out_dim);
+    double* gains = (double*) memory::Pool::getMemory(N * out_dim);
+    double* P     = (double*) memory::Pool::getMemory(N * N);
     if(dY == NULL || uY == NULL || gains == NULL || P == NULL) { printf("Memory allocation failed!\n"); exit(1); }
-    
+
     // initialization
     srand(random_seed);
     for(int i = 0; i < N * out_dim; i++)    uY[i] =  .0;
@@ -38,7 +40,7 @@ int main(int argc, char** argv) {
         if(fabs(X[i]) > max_X) max_X = fabs(X[i]);
     }
     for(int i = 0; i < N * in_dim; i++) X[i] /= max_X;
-    
+
     computeGaussianPerplexity(X, N, out_dim, P, perp); // namespace computeGPvx
 
     // Lie about the P-values

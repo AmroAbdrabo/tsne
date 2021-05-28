@@ -8,7 +8,8 @@
 using namespace computeGPv1;
 using namespace updateGradientv3;
 using namespace zeroMeanv1;
-using namespace computeSEDv2;
+using namespace computeSEDv2d2ru;
+// using namespace computeSEDv1;
 
 void usage() {
     cout << "[Usage] ./test <kernel_name1> <kernel_name2> ...\n";

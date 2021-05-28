@@ -29,3 +29,4 @@ protected:
 };
 
 } /* namespace memory */
+#endif /* HPCJOIN_MEMORY_POOL_H_ */

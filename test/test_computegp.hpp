@@ -2,6 +2,7 @@
 
 #include "test.hpp"
 #include "kernels/computeGP.hpp"
+#include "memory/Pool.h"
 
 class Test_ComputeGP : public Test
 {
@@ -52,6 +53,7 @@ public:
         } while (multiplier > 2);
 
         double total_cycles = 0;
+        memory::Pool::allocate(num_runs * N * N * sizeof(double));
         for (size_t j = 0; j < REP; j++) {
             start = start_tsc();
             for (size_t i = 0; i < num_runs; ++i) {
@@ -62,6 +64,7 @@ public:
             cycles = ((double)end) / num_runs;
             total_cycles += cycles;
         }
+        memory::Pool::freeAll();
         cycles = total_cycles / REP;
         print_perf(cycles, num_runs);
     }

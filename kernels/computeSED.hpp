@@ -645,6 +645,27 @@ namespace computeSEDv2d2ruvec{ // with blocking for cache AND register w unrolli
             const double* Xj = X + i * D;
             for(int j = i; j < N - b + 1; j += b, Xj += b * D) {
                 const double* Xii = Xi;
+                if(i == j) { // diagonal block
+                    for(int ii = i; ii < i + b; ii++, Xii += D) {
+                        const double* Xjj = Xj;
+                        double xii0 = Xii[0], xii1 = Xii[1];
+                        int base = ii * N;
+                        for(int jj = j; jj < j + b; jj++, Xjj += D) {
+                                if(ii == jj) {
+                                    // DD[base + jj] = 0.0;
+                                    DD[base + jj] = 0.0;
+                                    continue;
+                                }
+
+                                double tmp1 = xii0 - Xjj[0];
+                                double tmp2 = xii1 - Xjj[1];
+                                double dist = tmp1 * tmp1 + tmp2 * tmp2;
+                                
+                                DD[base + jj] = dist;
+                        }
+                    }
+                    continue;
+               }
                 for(int ii = i; ii < i + b - rbi + 1; ii += rbi, Xii += rbi * D) {
                     const double* Xjj = Xj;
                     
@@ -656,11 +677,6 @@ namespace computeSEDv2d2ruvec{ // with blocking for cache AND register w unrolli
                     xvecd1 = _mm256_permute4x64_pd(xvecd1, 0b11011000);
 
                     for(int jj = j; jj < j + b; jj++, Xjj += D) {
-                        if(ii == jj) {
-                            DD[ii * N + jj] = 0.0;
-                            continue;
-                        }
-
                         // load y
                         d256 yvecd0 = _mm256_set1_pd(Xjj[0]);
                         d256 yvecd1 = _mm256_set1_pd(Xjj[1]);
@@ -681,6 +697,87 @@ namespace computeSEDv2d2ruvec{ // with blocking for cache AND register w unrolli
                         DD[base] = DD[symm_base + 1]; base += N;
                         DD[base] = DD[symm_base + 2]; base += N;
                         DD[base] = DD[symm_base + 3];
+                    }
+                }
+            }
+        }
+    }
+}
+
+namespace computeSEDv2d2ruvecbuf{ // with blocking for cache AND register w unrolling
+    typedef __m256d d256;
+    void computeSquaredEuclideanDistance(const double* X, int N,  int D, double* DD) {
+       const int b = 32; // block size for cache
+       const int rbi = 4; // block size for registers, in the following unrolling, assume rbi = 4, o/w it won't work
+       const int rbj = 16; // block size for registers
+       double buf[b * b] __attribute__ ((aligned (32)));
+
+        const double* Xi = X;
+        for(int i = 0; i < N - b + 1; i += b, Xi += b * D) {
+            const double* Xj = X + i * D;
+            for(int j = i; j < N - b + 1; j += b, Xj += b * D) {
+                const double* Xii = Xi;
+                if(i == j) { // diagonal block
+                    for(int ii = i; ii < i + b; ii++, Xii += D) {
+                        const double* Xjj = Xj;
+                        double xii0 = Xii[0], xii1 = Xii[1];
+                        int base = ii * N;
+                        for(int jj = j; jj < j + b; jj++, Xjj += D) {
+                                if(ii == jj) {
+                                    // DD[base + jj] = 0.0;
+                                    DD[base + jj] = 0.0;
+                                    continue;
+                                }
+
+                                double tmp1 = xii0 - Xjj[0];
+                                double tmp2 = xii1 - Xjj[1];
+                                double dist = tmp1 * tmp1 + tmp2 * tmp2;
+                                
+                                DD[base + jj] = dist;
+                        }
+                    }
+                    continue;
+               }
+                for(int ii = i; ii < i + b - rbi + 1; ii += rbi, Xii += rbi * D) {
+                    const double* Xjj = Xj;
+                    
+                    d256 x01 = _mm256_load_pd(Xii);
+                    d256 x23 = _mm256_load_pd(Xii + 4);
+                    d256 xvecd0 = _mm256_unpacklo_pd(x01, x23); // dim 0 
+                    d256 xvecd1 = _mm256_unpackhi_pd(x01, x23); // dim 1
+                    xvecd0 = _mm256_permute4x64_pd(xvecd0, 0b11011000);
+                    xvecd1 = _mm256_permute4x64_pd(xvecd1, 0b11011000);
+
+                    for(int jj = j; jj < j + b; jj++, Xjj += D) {
+                        // load y
+                        d256 yvecd0 = _mm256_set1_pd(Xjj[0]);
+                        d256 yvecd1 = _mm256_set1_pd(Xjj[1]);
+
+                       d256 xyd0  = _mm256_sub_pd(xvecd0, yvecd0);
+                        d256 xyd1  = _mm256_sub_pd(xvecd1, yvecd1);
+
+                        xyd0 = _mm256_mul_pd(xyd0, xyd0);
+                        xyd1 = _mm256_mul_pd(xyd1, xyd1);
+
+                        d256 xy = _mm256_add_pd(xyd0, xyd1);
+
+                        const int symm_base = (jj - j) * b + ii - i;
+                        _mm256_store_pd(buf + symm_base, xy);
+
+                        int base = ii * N + jj;
+                        DD[base] = buf[symm_base    ]; base += N;
+                        DD[base] = buf[symm_base + 1]; base += N;
+                        DD[base] = buf[symm_base + 2]; base += N;
+                        DD[base] = buf[symm_base + 3];
+                    }
+                }
+
+                // copy the buffer back to DD
+                for(int jj = j; jj < j + b; jj++) { 
+                    int base = jj * N;
+                    int buf_base = (jj - j) * b;
+                    for(int ii = i; ii < i + b; ii++) {
+                        DD[base + ii] = buf[buf_base + ii - i];
                     }
                 }
             }

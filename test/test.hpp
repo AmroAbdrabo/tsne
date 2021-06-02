@@ -52,7 +52,7 @@ T nrm_sqr_diff(T *x, T *y, int n) {
 }
 
 template<typename T> void printElement(T t) {
-    std::cout << std::left << std::setw(16) << std::setfill(' ') << t;
+    std::cout << std::left << std::setw(20) << std::setfill(' ') << t;
 }
 
 class Test {

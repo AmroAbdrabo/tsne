@@ -80,9 +80,12 @@ int main(int argc, char** argv) {
     }
     //std::cout << Y[3] << std::endl;
 
-
+    // Save data for visualization
     save_data(Y);
+
     // Clean up memory
+    free(X);
+    free(Y);
     free(dY);
     free(uY);
     free(gains);

@@ -47,7 +47,6 @@ namespace updateGradient_zeroMeanv1 {
             }
             nN += N;
         }
-        //printf("v1 [%.3f, %.3f, %.3f, %.3f] (%f, %d) \n", Q[N-4], Q[N-3], Q[N-2], Q[N-1], sum_Q, cnt);
 
         // Perform the computation of the gradient
         nN = 0;
@@ -190,18 +189,20 @@ namespace updateGradient_zeroMeanv3_dx {
 
     inline void updateGradient_zeroMean(const double* P, double* Y, int N, int out_dim, double* dY, 
                                 double* uY, double* gains, const double momentum, const double eta) {
+
         // Make sure the current gradient contains zeros    (at every iteration!)
+        const int ND = N * out_dim;
         int i = 0;
-        for(; i < N * out_dim; i += 4){
+        for(; i < ND - 3; i += 4){
             _mm256_store_pd(dY + i, zero_vec);
         }
-        for(; i < N * out_dim; ++i) dY[i] = 0.0;
+        for(; i < ND; ++i) dY[i] = 0.0;
         
         // Compute the squared Euclidean distance matrix
         double* DD = static_cast<double *>(aligned_alloc(32, N * N * sizeof(double)));  //use aligned_alloc for intel intinsics!
         if(DD == NULL) { printf("Memory allocation failed!\n"); exit(1); }
         /****SED****/
-        computeSEDv2dx::computeSquaredEuclideanDistance(Y, N, out_dim, DD);
+        computeSEDv1::computeSquaredEuclideanDistance(Y, N, out_dim, DD);
         /****SED****/
 
         // Compute Q-matrix and normalization sum
@@ -214,7 +215,7 @@ namespace updateGradient_zeroMeanv3_dx {
         __m256d Q_vec, DD_vec;
         
         const int N2 = N*N;
-        for(i = 0; i < N2; i += 4) {
+        for(i = 0; i < N2 - 3; i += 4) {
             DD_vec = _mm256_load_pd(DD + i);
             DD_vec = _mm256_add_pd(one_vec, DD_vec);
             Q_vec  = _mm256_div_pd(one_vec, DD_vec);
@@ -229,7 +230,7 @@ namespace updateGradient_zeroMeanv3_dx {
             sum_Q += Q[i] + Q[i+1];
         }
         sum_Q_vec = _mm256_hadd_pd(sum_Q_vec, sum_Q_vec);
-        sum_Q += ((double*)&sum_Q_vec)[0] + ((double*)&sum_Q_vec)[2];
+        sum_Q += sum_Q_vec[0] + sum_Q_vec[2];
         
         // Perform the computation of the gradient
         const double sum_Q_inv = 1.0 / (sum_Q - double(N));
@@ -261,7 +262,7 @@ namespace updateGradient_zeroMeanv3_dx {
         const __m256d mom_vec  = _mm256_set1_pd(momentum);
         __m256d gain_vec, dY_vec, Y_vec, uY_vec, sign_dY_vec, sign_uY_vec, gain_cmp, eta_dY_vec;
 
-        for(i = 0; i < N * out_dim; i += 4){
+        for(i = 0; i < ND - 3; i += 4){
             gain_vec = _mm256_load_pd(gains + i);
             dY_vec   = _mm256_load_pd(dY + i);
             uY_vec   = _mm256_load_pd(uY + i);
@@ -284,7 +285,7 @@ namespace updateGradient_zeroMeanv3_dx {
 
             _mm256_store_pd(Y + i, Y_vec);
         }
-        for(; i < N * out_dim; ++i){
+        for(; i < ND; ++i){
             gains[i] = (sign(dY[i]) != sign(uY[i])) ? (gains[i] + 0.2) : (gains[i] * 0.8);
             if(gains[i] < 0.01) gains[i] = 0.01;
 
@@ -309,7 +310,7 @@ namespace updateGradient_zeroMeanv3_d2 {
         if(DD == NULL) { printf("Memory allocation failed!\n"); exit(1); }
 
         /****SED****/
-        computeSEDv2d2ruvec::computeSquaredEuclideanDistance(Y, N, out_dim, DD);
+        computeSEDv2d2buf::computeSquaredEuclideanDistance(Y, N, out_dim, DD);
         /****SED****/
 
         // Compute Q-matrix and normalization sum
@@ -323,7 +324,7 @@ namespace updateGradient_zeroMeanv3_d2 {
         
         int i;
         const int N2 = N*N;
-        for(i = 0; i < N2; i += 4) {
+        for(i = 0; i < N2 - 3; i += 4) {
             DD_vec = _mm256_load_pd(DD + i);
             DD_vec = _mm256_add_pd(one_vec, DD_vec);
             Q_vec  = _mm256_div_pd(one_vec, DD_vec);
@@ -338,7 +339,7 @@ namespace updateGradient_zeroMeanv3_d2 {
             sum_Q += Q[i] + Q[i+1];
         }
         sum_Q_vec = _mm256_hadd_pd(sum_Q_vec, sum_Q_vec);
-        sum_Q += ((double*)&sum_Q_vec)[0] + ((double*)&sum_Q_vec)[2];
+        sum_Q += sum_Q_vec[0] + sum_Q_vec[2];
         
         // Perform the computation of the gradient
         const double sum_Q_inv = 1.0 / (sum_Q - double(N));
@@ -361,7 +362,7 @@ namespace updateGradient_zeroMeanv3_d2 {
             Y_nD_vec1  = _mm256_broadcast_sd(Y + nD);
             Y_nD_vec2  = _mm256_broadcast_sd(Y + nD + 1);
 
-            for(m = 0; m < N; m += 4) {
+            for(m = 0; m < N - 3; m += 4) {
                 P_vec = _mm256_load_pd(P + nN + m);
                 Q_vec = _mm256_load_pd(Q + nN + m);
                 
@@ -423,7 +424,7 @@ namespace updateGradient_zeroMeanv3_d2 {
 
         const int ND = N * out_dim;
         double gains1, gains2, dY1, dY2, uY1, uY2;
-        for(i = 0; i < ND; i += 4){
+        for(i = 0; i < ND - 3; i += 4){
             gain_vec = _mm256_load_pd(gains + i);
             dY_vec   = _mm256_load_pd(dY + i);
             uY_vec   = _mm256_load_pd(uY + i);
@@ -486,7 +487,6 @@ namespace updateGradient_zeroMeanv4_d2 {
         if(Q == NULL) { printf("Memory allocation failed!\n"); exit(1); }
 
         /****SED****/
-        double sum_Q = 0.0;
         //int cnt = 0;
         __m256d sum_Q_vec = _mm256_setzero_pd(); 
         __m256d Q_vec;
@@ -550,11 +550,9 @@ namespace updateGradient_zeroMeanv4_d2 {
 
         sum_Q_vec = _mm256_hadd_pd(sum_Q_vec, sum_Q_vec);
 
-        sum_Q += ((double*)&sum_Q_vec)[0] + ((double*)&sum_Q_vec)[2];
-
         //printf("v4 [%.3f, %.3f, %.3f, %.3f] (%f, %d) \n", Q[N-4], Q[N-3], Q[N-2], Q[N-1], 2.0*sum_Q, cnt);
         
-        const double sum_Q_inv = 1.0 / (2.0*sum_Q);
+        const double sum_Q_inv = 0.5 / (sum_Q_vec[0] + sum_Q_vec[2]);
         const __m256d sum_Q_inv_vec = _mm256_set1_pd(sum_Q_inv);
 
         __m256d P_vec, dY_vec1, dY_vec2, dY_vec1_sum, dY_vec2_sum, Y_nD_vec1, Y_nD_vec2, Y_mD_vec1, Y_mD_vec2, Y_mD_vec3, Y_mD_vec4, mult_vec;
@@ -574,7 +572,7 @@ namespace updateGradient_zeroMeanv4_d2 {
             Y_nD_vec1  = _mm256_broadcast_sd(Y + nD);
             Y_nD_vec2  = _mm256_broadcast_sd(Y + nD + 1);
 
-            for(m = 0; m < N; m += 4) {
+            for(m = 0; m < N - 3; m += 4) {
                 P_vec = _mm256_load_pd(P + nN + m);
                 Q_vec = _mm256_load_pd(Q + nN + m);
                 
@@ -613,8 +611,8 @@ namespace updateGradient_zeroMeanv4_d2 {
             dY_vec1_sum = _mm256_hadd_pd(dY_vec1_sum, dY_vec1_sum);
             dY_vec2_sum = _mm256_hadd_pd(dY_vec2_sum, dY_vec2_sum);
 
-            dY_temp[0] += ((double*)&dY_vec1_sum)[0] + ((double*)&dY_vec1_sum)[2];
-            dY_temp[1] += ((double*)&dY_vec2_sum)[0] + ((double*)&dY_vec2_sum)[2];
+            dY_temp[0] += dY_vec1_sum[0] + dY_vec1_sum[2];
+            dY_temp[1] += dY_vec2_sum[0] + dY_vec2_sum[2];
             
             dY[nD    ] = dY_temp[0];
             dY[nD + 1] = dY_temp[1];
@@ -637,7 +635,7 @@ namespace updateGradient_zeroMeanv4_d2 {
         
         int i;
         const int ND = N * out_dim;
-        for(i = 0; i < ND; i += 4){
+        for(i = 0; i < ND - 3; i += 4){
             gain_vec = _mm256_load_pd(gains + i);
             dY_vec   = _mm256_load_pd(dY + i);
             uY_vec   = _mm256_load_pd(uY + i);
@@ -794,7 +792,7 @@ namespace updateGradient_zeroMeanv4_d2 {
 
 //unpack all optimized kernels and optimize (out_dim=2) (own version of zeroMean)
 namespace updateGradient_zeroMeanv5_d2 {
-    typedef __m256d d256;
+
     inline void updateGradient_zeroMean(const double* P, double* Y, int N, int out_dim, double* dY, 
                                 double* uY, double* gains, const double momentum, const double eta) {
         
@@ -805,7 +803,7 @@ namespace updateGradient_zeroMeanv5_d2 {
 
         /****SED****/
         double sum_Q = 0.0;
-        int cnt = 0;
+        //int cnt = 0;
         __m256d sum_Q_vec = _mm256_setzero_pd(); 
         __m256d Q_vec;
 
@@ -828,7 +826,7 @@ namespace updateGradient_zeroMeanv5_d2 {
                     xvecd0 = _mm256_permute4x64_pd(xvecd0, 0b11011000);
                     xvecd1 = _mm256_permute4x64_pd(xvecd1, 0b11011000);
 
-                    for(int jj = j; jj < j + b; jj++, Xjj += out_dim) {
+                    for(int jj = j; jj < j + b; ++jj, Xjj += out_dim) {
                         if(ii == jj) {
                             Q[ii * N + jj] = 0.0;    
                             continue;
@@ -841,16 +839,16 @@ namespace updateGradient_zeroMeanv5_d2 {
                         __m256d xyd0  = _mm256_sub_pd(xvecd0, yvecd0);
                         __m256d xyd1  = _mm256_sub_pd(xvecd1, yvecd1);
 
-                        xyd0 = _mm256_mul_pd(xyd0, xyd0);
+                        //xyd0 = _mm256_mul_pd(xyd0, xyd0);
                         xyd1 = _mm256_mul_pd(xyd1, xyd1);
 
-                        __m256d xy = _mm256_add_pd(xyd0, xyd1);
+                        __m256d xy = _mm256_fmadd_pd(xyd0, xyd0, xyd1);
 
                         xy = _mm256_add_pd(one_vec, xy);
                         xy = _mm256_div_pd(one_vec, xy);       //xy = 1.0/(1.0 + xy)
 
                         sum_Q_vec = _mm256_add_pd(sum_Q_vec, xy);
-                        cnt += 8;
+                        //cnt += 8;
 
                         const int symm_base = jj * N + ii;
                         _mm256_store_pd(Q + symm_base, xy);
@@ -868,11 +866,11 @@ namespace updateGradient_zeroMeanv5_d2 {
 
         sum_Q_vec = _mm256_hadd_pd(sum_Q_vec, sum_Q_vec);
 
-        sum_Q += ((double*)&sum_Q_vec)[0] + ((double*)&sum_Q_vec)[2];
+        sum_Q += sum_Q_vec[0] + sum_Q_vec[2];
 
         //printf("v4 [%.3f, %.3f, %.3f, %.3f] (%f, %d) \n", Q[N-4], Q[N-3], Q[N-2], Q[N-1], 2.0*sum_Q, cnt);
         
-        const double sum_Q_inv = 1.0 / (2.0*sum_Q);
+        const double sum_Q_inv = 0.5 / sum_Q;
         const __m256d sum_Q_inv_vec = _mm256_set1_pd(sum_Q_inv);
 
         __m256d P_vec, dY_vec1, dY_vec2, dY_vec1_sum, dY_vec2_sum, Y_nD_vec1, Y_nD_vec2, Y_mD_vec1, Y_mD_vec2, Y_mD_vec3, Y_mD_vec4, mult_vec;
@@ -910,11 +908,11 @@ namespace updateGradient_zeroMeanv5_d2 {
                 dY_vec1 = _mm256_sub_pd(Y_mD_vec1, Y_nD_vec1);
                 dY_vec2 = _mm256_sub_pd(Y_mD_vec2, Y_nD_vec2);
 
-                dY_vec1 = _mm256_mul_pd(dY_vec1, mult_vec);
-                dY_vec2 = _mm256_mul_pd(dY_vec2, mult_vec);
+                // dY_vec1 = _mm256_mul_pd(dY_vec1, mult_vec);
+                // dY_vec2 = _mm256_mul_pd(dY_vec2, mult_vec);
 
-                dY_vec1_sum = _mm256_add_pd(dY_vec1_sum, dY_vec1);
-                dY_vec2_sum = _mm256_add_pd(dY_vec2_sum, dY_vec2);
+                dY_vec1_sum = _mm256_fmadd_pd(mult_vec, dY_vec1, dY_vec1_sum);
+                dY_vec2_sum = _mm256_fmadd_pd(mult_vec, dY_vec2, dY_vec2_sum);
 
                 mD += 8;
             }
@@ -931,8 +929,8 @@ namespace updateGradient_zeroMeanv5_d2 {
             dY_vec1_sum = _mm256_hadd_pd(dY_vec1_sum, dY_vec1_sum);
             dY_vec2_sum = _mm256_hadd_pd(dY_vec2_sum, dY_vec2_sum);
 
-            dY_temp[0] += ((double*)&dY_vec1_sum)[0] + ((double*)&dY_vec1_sum)[2];
-            dY_temp[1] += ((double*)&dY_vec2_sum)[0] + ((double*)&dY_vec2_sum)[2];
+            dY_temp[0] += dY_vec1_sum[0] + dY_vec1_sum[2];
+            dY_temp[1] += dY_vec2_sum[0] + dY_vec2_sum[2];
             
             dY[nD    ] = dY_temp[0];
             dY[nD + 1] = dY_temp[1];
@@ -952,13 +950,12 @@ namespace updateGradient_zeroMeanv5_d2 {
         __m256d gain_vec, dY_vec, Y_vec, uY_vec, sign_dY_vec, sign_uY_vec, gain_cmp, eta_dY_vec;
 
         __m256d mean_vec = _mm256_setzero_pd();
-        double* mean = (double*) calloc(2, sizeof(double));
 
         double gains1, gains2, dY1, dY2, uY1, uY2;
         
         int i;
         const int ND = N * out_dim;
-        for(i = 0; i < ND; i += 4){
+        for(i = 0; i < ND - 3; i += 4){
             gain_vec = _mm256_load_pd(gains + i);
             dY_vec   = _mm256_load_pd(dY + i);
             uY_vec   = _mm256_load_pd(uY + i);
@@ -1004,29 +1001,672 @@ namespace updateGradient_zeroMeanv5_d2 {
             Y[i] = Y[i] + uY[i];
             Y[i+1] = Y[i+1] + uY[i+1];
 
-            mean[0] += Y[i];
-            mean[1] += Y[i+1];
+            mean_vec = _mm256_add_pd(mean_vec, _mm256_set_pd(0.0, 0.0, Y[i+1], Y[i]));
         } 
 
         /****zeroMean****/
-        mean_vec = _mm256_add_pd(mean_vec, _mm256_set_pd(mean[0], mean[1], 0.0, 0.0));
         mean_vec = _mm256_mul_pd(mean_vec, _mm256_set1_pd(1.0/double(N)));
         mean_vec = _mm256_permute4x64_pd(mean_vec, 0b11011000);
         mean_vec = _mm256_hadd_pd(mean_vec, mean_vec);
         mean_vec = _mm256_permute4x64_pd(mean_vec, 0b11011000);
 
         
-        for(i = 0; i < ND; i += 4){
+        for(i = 0; i < ND - 3; i += 4){
             Y_vec = _mm256_load_pd(Y + i);
             Y_vec = _mm256_sub_pd(Y_vec, mean_vec);
             _mm256_store_pd(Y + i, Y_vec);
         }
         for(; i < ND; i += 2){
-            Y[i]   -= ((double*)&mean_vec)[0];
-            Y[i+1] -= ((double*)&mean_vec)[1];
+            Y[i]   -= mean_vec[0];
+            Y[i+1] -= mean_vec[1];
         }
+        /****zeroMean****/
+    }
+}
 
-        free(mean); mean = NULL;
+//unpack all optimized kernels and optimize (out_dim=2) (own version of zeroMean) (strict upper matrix)
+//ONLY WORKS IF N DIVISBLE BY 4
+//does not performe as it should. Still error (because of wrong SED kernel)
+namespace updateGradient_zeroMeanv6_d2 {
+    inline void updateGradient_zeroMean(const double* P, double* Y, int N, int out_dim, double* dY, 
+                                double* uY, double* gains, const double momentum, const double eta) {
+
+        // Compute the squared Euclidean distance matrix
+        // Compute Q-matrix and normalization sum
+        double* Q = static_cast<double *>(aligned_alloc(32, N * N * sizeof(double)));  //use aligned_alloc for intel intrinsics!
+        if(Q == NULL) { printf("Memory allocation failed!\n"); exit(1); }
+        
+        /****SED****/
+        //int cnt = 0;
+        __m256d sum_Q_vec = _mm256_setzero_pd(); 
+        __m256d Q_vec;
+
+        const int b = 16; // block size for cache
+        const int rbi = 4; // block size for registers, in the following unrolling, assume rbi = 4, o/w it won't work
+        const int rbj = 16; // block size for registers
+        
+        const double* Xi = Y;
+        for(int i = 0; i < N - b + 1; i += b, Xi += b * out_dim) {
+            const double* Xj = Y + i * out_dim;
+            for(int j = i; j < N - b + 1; j += b, Xj += b * out_dim) {
+                const double* Xii = Xi;
+                for(int ii = i; ii < i + b - rbi + 1; ii += rbi, Xii += rbi * out_dim) {
+                    const double* Xjj = Xj;
+                    
+                    __m256d x01 = _mm256_load_pd(Xii);
+                    __m256d x23 = _mm256_load_pd(Xii + 4);
+                    __m256d xvecd0 = _mm256_unpacklo_pd(x01, x23); // dim 0 
+                    __m256d xvecd1 = _mm256_unpackhi_pd(x01, x23); // dim 1
+                    xvecd0 = _mm256_permute4x64_pd(xvecd0, 0b11011000);
+                    xvecd1 = _mm256_permute4x64_pd(xvecd1, 0b11011000);
+
+                    for(int jj = j; jj < j + b; ++jj, Xjj += out_dim) {
+                        if(ii == jj) {
+                            Q[ii * N + jj] = 1.0;    
+                            continue;
+                        }
+
+                        // load y
+                        __m256d yvecd0 = _mm256_set1_pd(Xjj[0]);
+                        __m256d yvecd1 = _mm256_set1_pd(Xjj[1]);
+
+                        __m256d xyd0  = _mm256_sub_pd(xvecd0, yvecd0);
+                        __m256d xyd1  = _mm256_sub_pd(xvecd1, yvecd1);
+
+                        //xyd0 = _mm256_mul_pd(xyd0, xyd0);
+                        xyd1 = _mm256_mul_pd(xyd1, xyd1);
+
+                        __m256d xy = _mm256_fmadd_pd(xyd0, xyd0, xyd1);
+
+                        xy = _mm256_add_pd(one_vec, xy);
+                        xy = _mm256_div_pd(one_vec, xy);       //xy = 1.0/(1.0 + xy)
+
+                        sum_Q_vec = _mm256_add_pd(sum_Q_vec, xy);
+                        //cnt += 8;
+
+                        const int symm_base = jj * N + ii;
+                        _mm256_store_pd(Q + symm_base, xy);
+
+                        // int base = ii * N + jj;
+                        // Q[base] = Q[symm_base    ]; base += N;
+                        // Q[base] = Q[symm_base + 1]; base += N;
+                        // Q[base] = Q[symm_base + 2]; base += N;
+                        // Q[base] = Q[symm_base + 3];
+                    }
+                }
+            }
+        }
+        /****SED****/
+
+
+        sum_Q_vec = _mm256_hadd_pd(sum_Q_vec, sum_Q_vec);
+
+        //printf("v4 [%.3f, %.3f, %.3f, %.3f] (%f, %d) \n", Q[N-4], Q[N-3], Q[N-2], Q[N-1], 2.0*sum_Q, cnt);
+        
+        const double sum_Q_inv = 0.5 / (sum_Q_vec[0] + sum_Q_vec[2]);
+        const __m256d sum_Q_inv_vec = _mm256_set1_pd(sum_Q_inv);
+
+        __m256d P_vec, dY_vec1, dY_vec2, dY_vec1_sum, dY_vec2_sum, Y_nD_vec1, Y_nD_vec2, Y_mD_vec1, Y_mD_vec2, Y_mD_vec3, Y_mD_vec4, mult_vec;
+
+        double dY_temp[2];
+
+
+        int m;
+        int nD = 0;
+        for(int n = 0; n < N; ++n) {
+
+            dY_temp[0] = 0.0;
+            dY_temp[1] = 0.0;
+            dY_vec1_sum = _mm256_setzero_pd();
+            dY_vec2_sum = _mm256_setzero_pd();
+            Y_nD_vec1  = _mm256_broadcast_sd(Y + n*2);
+            Y_nD_vec2  = _mm256_broadcast_sd(Y + n*2 + 1);
+
+            //m smaller than n
+            for(m = 0; m < n - 2; m += 4) {
+                P_vec = _mm256_set_pd(P[(m+3)*N + n], P[(m+2)*N + n], P[(m+1)*N + n], P[(m  )*N + n]);
+                Q_vec = _mm256_set_pd(Q[(m+3)*N + n], Q[(m+2)*N + n], Q[(m+1)*N + n], Q[(m  )*N + n]);
+                
+                mult_vec  = _mm256_mul_pd(_mm256_fmsub_pd(Q_vec, sum_Q_inv_vec, P_vec), Q_vec); //actually this is -mult
+
+                Y_mD_vec1 = _mm256_load_pd(Y + m*2);
+                Y_mD_vec2 = _mm256_load_pd(Y + m*2 + 4);
+
+                Y_mD_vec3 = _mm256_unpacklo_pd(Y_mD_vec1, Y_mD_vec2);
+                Y_mD_vec4 = _mm256_unpackhi_pd(Y_mD_vec1, Y_mD_vec2);
+
+                Y_mD_vec1 = _mm256_permute4x64_pd(Y_mD_vec3, 0b11011000);
+                Y_mD_vec2 = _mm256_permute4x64_pd(Y_mD_vec4, 0b11011000);
+
+                dY_vec1 = _mm256_sub_pd(Y_mD_vec1, Y_nD_vec1);      //extra inverted because of -mult
+                dY_vec2 = _mm256_sub_pd(Y_mD_vec2, Y_nD_vec2);
+
+                dY_vec1_sum = _mm256_fmadd_pd(mult_vec, dY_vec1, dY_vec1_sum);
+                dY_vec2_sum = _mm256_fmadd_pd(mult_vec, dY_vec2, dY_vec2_sum);
+            }
+
+            //special cases [n - 2, n + 4] cases
+            if(m == n){
+                P_vec = _mm256_load_pd(P + n*N + m);
+                Q_vec = _mm256_load_pd(Q + n*N + m);
+
+                mult_vec  = _mm256_mul_pd(_mm256_fmsub_pd(Q_vec, sum_Q_inv_vec, P_vec), Q_vec); //actually this is -mult
+
+                Y_mD_vec1 = _mm256_load_pd(Y + m*2);
+                Y_mD_vec2 = _mm256_load_pd(Y + m*2 + 4);
+
+                Y_mD_vec3 = _mm256_unpacklo_pd(Y_mD_vec1, Y_mD_vec2);
+                Y_mD_vec4 = _mm256_unpackhi_pd(Y_mD_vec1, Y_mD_vec2);
+
+                Y_mD_vec1 = _mm256_permute4x64_pd(Y_mD_vec3, 0b11011000);
+                Y_mD_vec2 = _mm256_permute4x64_pd(Y_mD_vec4, 0b11011000);
+
+                dY_vec1 = _mm256_sub_pd(Y_mD_vec1, Y_nD_vec1);      //extra inverted because of -mult
+                dY_vec2 = _mm256_sub_pd(Y_mD_vec2, Y_nD_vec2);
+
+                dY_vec1_sum = _mm256_fmadd_pd(mult_vec, dY_vec1, dY_vec1_sum);
+                dY_vec2_sum = _mm256_fmadd_pd(mult_vec, dY_vec2, dY_vec2_sum);
+
+                m += 4;
+            }
+            else if(m == n - 1){                                    //actually 0.0 here
+                P_vec = _mm256_set_pd(P[(n)*N + m+3], P[(n)*N + m+2], P[(n)*N + m+1], P[(n-1)*N + m+1]);
+                Q_vec = _mm256_set_pd(Q[(n)*N + m+3], Q[(n)*N + m+2], Q[(n)*N + m+1], Q[(n-1)*N + m+1]);
+
+                mult_vec  = _mm256_mul_pd(_mm256_fmsub_pd(Q_vec, sum_Q_inv_vec, P_vec), Q_vec); //actually this is -mult
+
+                Y_mD_vec1 = _mm256_load_pd(Y + m*2);
+                Y_mD_vec2 = _mm256_load_pd(Y + m*2 + 4);
+
+                Y_mD_vec3 = _mm256_unpacklo_pd(Y_mD_vec1, Y_mD_vec2);
+                Y_mD_vec4 = _mm256_unpackhi_pd(Y_mD_vec1, Y_mD_vec2);
+
+                Y_mD_vec1 = _mm256_permute4x64_pd(Y_mD_vec3, 0b11011000);
+                Y_mD_vec2 = _mm256_permute4x64_pd(Y_mD_vec4, 0b11011000);
+
+                dY_vec1 = _mm256_sub_pd(Y_mD_vec1, Y_nD_vec1);      //extra inverted because of -mult
+                dY_vec2 = _mm256_sub_pd(Y_mD_vec2, Y_nD_vec2);
+
+                dY_vec1_sum = _mm256_fmadd_pd(mult_vec, dY_vec1, dY_vec1_sum);
+                dY_vec2_sum = _mm256_fmadd_pd(mult_vec, dY_vec2, dY_vec2_sum);
+
+                m += 4;
+            }else if(m == n - 2){
+                P_vec = _mm256_set_pd(P[(n)*N + m+3], P[(n)*N + m+2], P[(n-1)*N + m+2], P[(n-2)*N + m+2]);
+                Q_vec = _mm256_set_pd(Q[(n)*N + m+3], Q[(n)*N + m+2], Q[(n-1)*N + m+2], Q[(n-2)*N + m+2]);
+
+                mult_vec  = _mm256_mul_pd(_mm256_fmsub_pd(Q_vec, sum_Q_inv_vec, P_vec), Q_vec); //actually this is -mult
+
+                Y_mD_vec1 = _mm256_load_pd(Y + m*2);
+                Y_mD_vec2 = _mm256_load_pd(Y + m*2 + 4);
+
+                Y_mD_vec3 = _mm256_unpacklo_pd(Y_mD_vec1, Y_mD_vec2);
+                Y_mD_vec4 = _mm256_unpackhi_pd(Y_mD_vec1, Y_mD_vec2);
+
+                Y_mD_vec1 = _mm256_permute4x64_pd(Y_mD_vec3, 0b11011000);
+                Y_mD_vec2 = _mm256_permute4x64_pd(Y_mD_vec4, 0b11011000);
+
+                dY_vec1 = _mm256_sub_pd(Y_mD_vec1, Y_nD_vec1);      //extra inverted because of -mult
+                dY_vec2 = _mm256_sub_pd(Y_mD_vec2, Y_nD_vec2);
+
+                dY_vec1_sum = _mm256_fmadd_pd(mult_vec, dY_vec1, dY_vec1_sum);
+                dY_vec2_sum = _mm256_fmadd_pd(mult_vec, dY_vec2, dY_vec2_sum);
+
+                m += 4;
+            }
+                
+            
+
+            //m [n, N - 3]
+            for(; m < N - 3; m += 4) {
+                P_vec = _mm256_load_pd(P + n*N + m);
+                Q_vec = _mm256_load_pd(Q + n*N + m);
+                
+                mult_vec  = _mm256_mul_pd(_mm256_fmsub_pd(Q_vec, sum_Q_inv_vec, P_vec), Q_vec); //actually this is -mult
+
+                Y_mD_vec1 = _mm256_load_pd(Y + m*2);
+                Y_mD_vec2 = _mm256_load_pd(Y + m*2 + 4);
+
+                Y_mD_vec3 = _mm256_unpacklo_pd(Y_mD_vec1, Y_mD_vec2);
+                Y_mD_vec4 = _mm256_unpackhi_pd(Y_mD_vec1, Y_mD_vec2);
+
+                Y_mD_vec1 = _mm256_permute4x64_pd(Y_mD_vec3, 0b11011000);
+                Y_mD_vec2 = _mm256_permute4x64_pd(Y_mD_vec4, 0b11011000);
+
+                dY_vec1 = _mm256_sub_pd(Y_mD_vec1, Y_nD_vec1);      //extra inverted because of -mult
+                dY_vec2 = _mm256_sub_pd(Y_mD_vec2, Y_nD_vec2);
+
+                dY_vec1_sum = _mm256_fmadd_pd(mult_vec, dY_vec1, dY_vec1_sum);
+                dY_vec2_sum = _mm256_fmadd_pd(mult_vec, dY_vec2, dY_vec2_sum);
+
+            }
+            for(; m < N; ++m) {
+                if(n != m) {
+                    double mult = (P[n*N + m] - (Q[n*N + m] * sum_Q_inv)) * Q[n*N + m];
+
+                    dY_temp[0] += (Y[n*2    ] - Y[m*2    ]) * mult;
+                    dY_temp[1] += (Y[n*2 + 1] - Y[m*2 + 1]) * mult;
+                }
+            }
+            
+            dY_vec1_sum = _mm256_hadd_pd(dY_vec1_sum, dY_vec1_sum);
+            dY_vec2_sum = _mm256_hadd_pd(dY_vec2_sum, dY_vec2_sum);
+
+            dY_temp[0] += dY_vec1_sum[0] + dY_vec1_sum[2];
+            dY_temp[1] += dY_vec2_sum[0] + dY_vec2_sum[2];
+            
+            dY[nD    ] = dY_temp[0];
+            dY[nD + 1] = dY_temp[1];
+            
+
+            nD += 2;
+        }
+        
+
+        // Free memory
+        free(Q);  Q = NULL;
+
+
+        const __m256d eta_vec  = _mm256_set1_pd(eta);
+        const __m256d mom_vec  = _mm256_set1_pd(momentum);
+        __m256d gain_vec, dY_vec, Y_vec, uY_vec, sign_dY_vec, sign_uY_vec, gain_cmp, eta_dY_vec;
+
+        __m256d mean_vec = _mm256_setzero_pd();
+
+        double gains1, gains2, dY1, dY2, uY1, uY2;
+        
+        int i;
+        const int ND = N * out_dim;
+        for(i = 0; i < ND - 3; i += 4){
+            gain_vec = _mm256_load_pd(gains + i);
+            dY_vec   = _mm256_load_pd(dY + i);
+            uY_vec   = _mm256_load_pd(uY + i);
+            Y_vec    = _mm256_load_pd(Y + i);
+
+            eta_dY_vec = _mm256_mul_pd(eta_vec, dY_vec);
+
+            gain_cmp = _mm256_cmp_pd(sign(dY_vec) , sign(uY_vec), _CMP_NEQ_OQ);
+            gain_vec = _mm256_blendv_pd(_mm256_mul_pd(gain_vec, z8_vec), _mm256_add_pd(gain_vec, z2_vec), gain_cmp);
+            gain_cmp = _mm256_cmp_pd(zz1_vec, gain_vec, _CMP_GT_OQ);
+            gain_vec = _mm256_blendv_pd(gain_vec, zz1_vec, gain_cmp);
+
+            _mm256_store_pd(gains + i, gain_vec);
+
+            uY_vec = _mm256_fmsub_pd(mom_vec, uY_vec, _mm256_mul_pd(gain_vec, eta_dY_vec));
+            
+            _mm256_store_pd(uY + i, uY_vec);
+            
+            Y_vec  = _mm256_add_pd(Y_vec, uY_vec);
+
+            mean_vec = _mm256_add_pd(mean_vec, Y_vec);
+
+            _mm256_store_pd(Y + i, Y_vec);
+        }
+        for(; i < ND; i += 2){
+            gains1 = gains[i];
+            gains2 = gains[i+1];
+
+            dY1 = dY[i];
+            dY2 = dY[i+1];
+
+            uY1 = uY[i];
+            uY2 = uY[i+1];
+
+            gains1 = (sign(dY1) != sign(uY1)) ? (gains1 + 0.2) : (gains1 * 0.8);
+            gains2 = (sign(dY2) != sign(uY2)) ? (gains2 + 0.2) : (gains2 * 0.8);
+            gains[i]   = (gains1 < 0.01) ? 0.01 : gains1;
+            gains[i+1] = (gains2 < 0.01) ? 0.01 : gains2;
+
+            uY[i]   = momentum * uY1 - eta * gains[i] * dY1;
+            uY[i+1] = momentum * uY2 - eta * gains[i+1] * dY2;
+
+            Y[i] = Y[i] + uY[i];
+            Y[i+1] = Y[i+1] + uY[i+1];
+
+            mean_vec = _mm256_add_pd(mean_vec, _mm256_set_pd(0.0, 0.0, Y[i+1], Y[i]));
+        } 
+
+        /****zeroMean****/
+        mean_vec = _mm256_mul_pd(mean_vec, _mm256_set1_pd(1.0/double(N)));
+        mean_vec = _mm256_permute4x64_pd(mean_vec, 0b11011000);
+        mean_vec = _mm256_hadd_pd(mean_vec, mean_vec);
+        mean_vec = _mm256_permute4x64_pd(mean_vec, 0b11011000);
+
+        
+        for(i = 0; i < ND - 3; i += 4){
+            Y_vec = _mm256_load_pd(Y + i);
+            Y_vec = _mm256_sub_pd(Y_vec, mean_vec);
+            _mm256_store_pd(Y + i, Y_vec);
+        }
+        for(; i < ND; i += 2){
+            Y[i]   -= mean_vec[0];
+            Y[i+1] -= mean_vec[1];
+        }
+        /****zeroMean****/
+    }
+}
+
+
+//unpack all optimized kernels and optimize (out_dim=2) (own version of zeroMean) (strict upper matrix)
+//ONLY WORKS IF N DIVISBLE BY 4
+//does not performe as it should. Still error (because of wrong SED kernel)
+namespace updateGradient_zeroMeanv7_d2 {
+    inline void updateGradient_zeroMean(const double* P, double* Y, int N, int out_dim, double* dY, 
+                                double* uY, double* gains, const double momentum, const double eta) {
+
+        // Compute the squared Euclidean distance matrix
+        // Compute Q-matrix and normalization sum
+        double* Q = static_cast<double *>(aligned_alloc(32, N * N * sizeof(double)));  //use aligned_alloc for intel intrinsics!
+        if(Q == NULL) { printf("Memory allocation failed!\n"); exit(1); }
+        
+        /****SED****/
+        double sum_Q = 0.0;
+
+        const int b = 32; // block size for cache
+        double buf[b * b] __attribute__ ((aligned (32)));
+
+        const double* Xi = Y;
+        for(int i = 0; i < N - b + 1; i += b, Xi += b * 2) {
+            const double* Xj = Y + i * 2;
+            for(int j = i; j < N - b + 1; j += b, Xj += b * 2) {
+                const double* Xii = Xi;
+                if(i == j) { // diagonal block
+                    for(int ii = i; ii < i + b; ii++, Xii += 2) {
+                        const double* Xjj = Xj;
+                        double xii0 = Xii[0], xii1 = Xii[1];
+                        int base = ii * N;
+                        for(int jj = j; jj < j + b; jj++, Xjj += 2) {
+                                if(ii == jj) {
+                                    // DD[base + jj] = 0.0;
+                                    Q[base + jj] = 1.0;
+                                    continue;
+                                }
+
+                                double tmp1 = xii0 - Xjj[0];
+                                double tmp2 = xii1 - Xjj[1];
+                                double dist = tmp1 * tmp1 + tmp2 * tmp2;
+
+                                dist = 1.0 / (1.0 + dist);
+                                
+                                Q[base + jj] = dist;
+                                sum_Q += dist;
+                        }
+                    }
+                    continue;
+               }
+
+                for(int ii = i; ii < i + b; ii++, Xii += 2) {
+                    const double* Xjj = Xj;
+                    double xii0 = Xii[0], xii1 = Xii[1];
+                    int base = ii * N;
+                    int shift = ii - i;
+                    int buf_base = (ii - i) * b;
+                    for(int jj = j; jj < j + b; jj++, Xjj += 2) {
+                        // for dim = 2
+                        double tmp1 = xii0 - Xjj[0];
+                        double tmp2 = xii1 - Xjj[1];
+                        double dist = tmp1 * tmp1 + tmp2 * tmp2;
+
+                        dist = 1.0 / (1.0 + dist);
+                        
+                        Q[base + jj] = dist;
+                        sum_Q += 2.0*dist;
+                        
+                        //buf[(jj-j) * b + shift] = dist;
+                    }
+                }
+
+                // copy the buffer back to DD
+                // for(int jj = j; jj < j + b; jj++) { 
+                //     int base = jj * N;
+                //     int buf_base = (jj - j) * b;
+                //     for(int ii = i; ii < i + b; ii++) {
+                //         Q[base + ii] = buf[buf_base + ii - i];
+                //     }
+                // }
+           }
+        }
+        /****SED****/
+        
+        const double sum_Q_inv = 1.0 / sum_Q;
+        const __m256d sum_Q_inv_vec = _mm256_set1_pd(sum_Q_inv);
+
+        __m256d Q_vec, P_vec, dY_vec1, dY_vec2, dY_vec1_sum, dY_vec2_sum, Y_nD_vec1, Y_nD_vec2, Y_mD_vec1, Y_mD_vec2, Y_mD_vec3, Y_mD_vec4, mult_vec;
+
+        double dY_temp[2];
+
+
+        int m;
+        int nD = 0;
+        for(int n = 0; n < N; ++n) {
+
+            dY_temp[0] = 0.0;
+            dY_temp[1] = 0.0;
+            dY_vec1_sum = _mm256_setzero_pd();
+            dY_vec2_sum = _mm256_setzero_pd();
+            Y_nD_vec1  = _mm256_broadcast_sd(Y + n*2);
+            Y_nD_vec2  = _mm256_broadcast_sd(Y + n*2 + 1);
+
+            //m smaller than n
+            for(m = 0; m < n - 2; m += 4) {
+                P_vec = _mm256_set_pd(P[(m+3)*N + n], P[(m+2)*N + n], P[(m+1)*N + n], P[(m  )*N + n]);
+                Q_vec = _mm256_set_pd(Q[(m+3)*N + n], Q[(m+2)*N + n], Q[(m+1)*N + n], Q[(m  )*N + n]);
+                
+                mult_vec  = _mm256_mul_pd(_mm256_fmsub_pd(Q_vec, sum_Q_inv_vec, P_vec), Q_vec); //actually this is -mult
+
+                Y_mD_vec1 = _mm256_load_pd(Y + m*2);
+                Y_mD_vec2 = _mm256_load_pd(Y + m*2 + 4);
+
+                Y_mD_vec3 = _mm256_unpacklo_pd(Y_mD_vec1, Y_mD_vec2);
+                Y_mD_vec4 = _mm256_unpackhi_pd(Y_mD_vec1, Y_mD_vec2);
+
+                Y_mD_vec1 = _mm256_permute4x64_pd(Y_mD_vec3, 0b11011000);
+                Y_mD_vec2 = _mm256_permute4x64_pd(Y_mD_vec4, 0b11011000);
+
+                dY_vec1 = _mm256_sub_pd(Y_mD_vec1, Y_nD_vec1);      //extra inverted because of -mult
+                dY_vec2 = _mm256_sub_pd(Y_mD_vec2, Y_nD_vec2);
+
+                dY_vec1_sum = _mm256_fmadd_pd(mult_vec, dY_vec1, dY_vec1_sum);
+                dY_vec2_sum = _mm256_fmadd_pd(mult_vec, dY_vec2, dY_vec2_sum);
+            }
+
+            //special cases [n - 2, n + 4] cases
+            if(m == n){
+                P_vec = _mm256_load_pd(P + n*N + m);
+                Q_vec = _mm256_load_pd(Q + n*N + m);
+
+                mult_vec  = _mm256_mul_pd(_mm256_fmsub_pd(Q_vec, sum_Q_inv_vec, P_vec), Q_vec); //actually this is -mult
+
+                Y_mD_vec1 = _mm256_load_pd(Y + m*2);
+                Y_mD_vec2 = _mm256_load_pd(Y + m*2 + 4);
+
+                Y_mD_vec3 = _mm256_unpacklo_pd(Y_mD_vec1, Y_mD_vec2);
+                Y_mD_vec4 = _mm256_unpackhi_pd(Y_mD_vec1, Y_mD_vec2);
+
+                Y_mD_vec1 = _mm256_permute4x64_pd(Y_mD_vec3, 0b11011000);
+                Y_mD_vec2 = _mm256_permute4x64_pd(Y_mD_vec4, 0b11011000);
+
+                dY_vec1 = _mm256_sub_pd(Y_mD_vec1, Y_nD_vec1);      //extra inverted because of -mult
+                dY_vec2 = _mm256_sub_pd(Y_mD_vec2, Y_nD_vec2);
+
+                dY_vec1_sum = _mm256_fmadd_pd(mult_vec, dY_vec1, dY_vec1_sum);
+                dY_vec2_sum = _mm256_fmadd_pd(mult_vec, dY_vec2, dY_vec2_sum);
+
+                m += 4;
+            }
+            else if(m == n - 1){                                    //actually 0.0 here
+                P_vec = _mm256_set_pd(P[(n)*N + m+3], P[(n)*N + m+2], P[(n)*N + m+1], P[(n-1)*N + m+1]);
+                Q_vec = _mm256_set_pd(Q[(n)*N + m+3], Q[(n)*N + m+2], Q[(n)*N + m+1], Q[(n-1)*N + m+1]);
+
+                mult_vec  = _mm256_mul_pd(_mm256_fmsub_pd(Q_vec, sum_Q_inv_vec, P_vec), Q_vec); //actually this is -mult
+
+                Y_mD_vec1 = _mm256_load_pd(Y + m*2);
+                Y_mD_vec2 = _mm256_load_pd(Y + m*2 + 4);
+
+                Y_mD_vec3 = _mm256_unpacklo_pd(Y_mD_vec1, Y_mD_vec2);
+                Y_mD_vec4 = _mm256_unpackhi_pd(Y_mD_vec1, Y_mD_vec2);
+
+                Y_mD_vec1 = _mm256_permute4x64_pd(Y_mD_vec3, 0b11011000);
+                Y_mD_vec2 = _mm256_permute4x64_pd(Y_mD_vec4, 0b11011000);
+
+                dY_vec1 = _mm256_sub_pd(Y_mD_vec1, Y_nD_vec1);      //extra inverted because of -mult
+                dY_vec2 = _mm256_sub_pd(Y_mD_vec2, Y_nD_vec2);
+
+                dY_vec1_sum = _mm256_fmadd_pd(mult_vec, dY_vec1, dY_vec1_sum);
+                dY_vec2_sum = _mm256_fmadd_pd(mult_vec, dY_vec2, dY_vec2_sum);
+
+                m += 4;
+            }else if(m == n - 2){
+                P_vec = _mm256_set_pd(P[(n)*N + m+3], P[(n)*N + m+2], P[(n-1)*N + m+2], P[(n-2)*N + m+2]);
+                Q_vec = _mm256_set_pd(Q[(n)*N + m+3], Q[(n)*N + m+2], Q[(n-1)*N + m+2], Q[(n-2)*N + m+2]);
+
+                mult_vec  = _mm256_mul_pd(_mm256_fmsub_pd(Q_vec, sum_Q_inv_vec, P_vec), Q_vec); //actually this is -mult
+
+                Y_mD_vec1 = _mm256_load_pd(Y + m*2);
+                Y_mD_vec2 = _mm256_load_pd(Y + m*2 + 4);
+
+                Y_mD_vec3 = _mm256_unpacklo_pd(Y_mD_vec1, Y_mD_vec2);
+                Y_mD_vec4 = _mm256_unpackhi_pd(Y_mD_vec1, Y_mD_vec2);
+
+                Y_mD_vec1 = _mm256_permute4x64_pd(Y_mD_vec3, 0b11011000);
+                Y_mD_vec2 = _mm256_permute4x64_pd(Y_mD_vec4, 0b11011000);
+
+                dY_vec1 = _mm256_sub_pd(Y_mD_vec1, Y_nD_vec1);      //extra inverted because of -mult
+                dY_vec2 = _mm256_sub_pd(Y_mD_vec2, Y_nD_vec2);
+
+                dY_vec1_sum = _mm256_fmadd_pd(mult_vec, dY_vec1, dY_vec1_sum);
+                dY_vec2_sum = _mm256_fmadd_pd(mult_vec, dY_vec2, dY_vec2_sum);
+
+                m += 4;
+            }
+                
+            
+
+            //m [n, N - 3]
+            for(; m < N - 3; m += 4) {
+                P_vec = _mm256_load_pd(P + n*N + m);
+                Q_vec = _mm256_load_pd(Q + n*N + m);
+                
+                mult_vec  = _mm256_mul_pd(_mm256_fmsub_pd(Q_vec, sum_Q_inv_vec, P_vec), Q_vec); //actually this is -mult
+
+                Y_mD_vec1 = _mm256_load_pd(Y + m*2);
+                Y_mD_vec2 = _mm256_load_pd(Y + m*2 + 4);
+
+                Y_mD_vec3 = _mm256_unpacklo_pd(Y_mD_vec1, Y_mD_vec2);
+                Y_mD_vec4 = _mm256_unpackhi_pd(Y_mD_vec1, Y_mD_vec2);
+
+                Y_mD_vec1 = _mm256_permute4x64_pd(Y_mD_vec3, 0b11011000);
+                Y_mD_vec2 = _mm256_permute4x64_pd(Y_mD_vec4, 0b11011000);
+
+                dY_vec1 = _mm256_sub_pd(Y_mD_vec1, Y_nD_vec1);      //extra inverted because of -mult
+                dY_vec2 = _mm256_sub_pd(Y_mD_vec2, Y_nD_vec2);
+
+                dY_vec1_sum = _mm256_fmadd_pd(mult_vec, dY_vec1, dY_vec1_sum);
+                dY_vec2_sum = _mm256_fmadd_pd(mult_vec, dY_vec2, dY_vec2_sum);
+
+            }
+            for(; m < N; ++m) {
+                if(n != m) {
+                    double mult = (P[n*N + m] - (Q[n*N + m] * sum_Q_inv)) * Q[n*N + m];
+
+                    dY_temp[0] += (Y[n*2    ] - Y[m*2    ]) * mult;
+                    dY_temp[1] += (Y[n*2 + 1] - Y[m*2 + 1]) * mult;
+                }
+            }
+            
+            dY_vec1_sum = _mm256_hadd_pd(dY_vec1_sum, dY_vec1_sum);
+            dY_vec2_sum = _mm256_hadd_pd(dY_vec2_sum, dY_vec2_sum);
+
+            dY_temp[0] += dY_vec1_sum[0] + dY_vec1_sum[2];
+            dY_temp[1] += dY_vec2_sum[0] + dY_vec2_sum[2];
+            
+            dY[nD    ] = dY_temp[0];
+            dY[nD + 1] = dY_temp[1];
+            
+
+            nD += 2;
+        }
+        
+
+        // Free memory
+        free(Q);  Q = NULL;
+
+
+        const __m256d eta_vec  = _mm256_set1_pd(eta);
+        const __m256d mom_vec  = _mm256_set1_pd(momentum);
+        __m256d gain_vec, dY_vec, Y_vec, uY_vec, sign_dY_vec, sign_uY_vec, gain_cmp, eta_dY_vec;
+
+        __m256d mean_vec = _mm256_setzero_pd();
+
+        double gains1, gains2, dY1, dY2, uY1, uY2;
+        
+        int i;
+        const int ND = N * out_dim;
+        for(i = 0; i < ND - 3; i += 4){
+            gain_vec = _mm256_load_pd(gains + i);
+            dY_vec   = _mm256_load_pd(dY + i);
+            uY_vec   = _mm256_load_pd(uY + i);
+            Y_vec    = _mm256_load_pd(Y + i);
+
+            eta_dY_vec = _mm256_mul_pd(eta_vec, dY_vec);
+
+            gain_cmp = _mm256_cmp_pd(sign(dY_vec) , sign(uY_vec), _CMP_NEQ_OQ);
+            gain_vec = _mm256_blendv_pd(_mm256_mul_pd(gain_vec, z8_vec), _mm256_add_pd(gain_vec, z2_vec), gain_cmp);
+            gain_cmp = _mm256_cmp_pd(zz1_vec, gain_vec, _CMP_GT_OQ);
+            gain_vec = _mm256_blendv_pd(gain_vec, zz1_vec, gain_cmp);
+
+            _mm256_store_pd(gains + i, gain_vec);
+
+            uY_vec = _mm256_fmsub_pd(mom_vec, uY_vec, _mm256_mul_pd(gain_vec, eta_dY_vec));
+            
+            _mm256_store_pd(uY + i, uY_vec);
+            
+            Y_vec  = _mm256_add_pd(Y_vec, uY_vec);
+
+            mean_vec = _mm256_add_pd(mean_vec, Y_vec);
+
+            _mm256_store_pd(Y + i, Y_vec);
+        }
+        for(; i < ND; i += 2){
+            gains1 = gains[i];
+            gains2 = gains[i+1];
+
+            dY1 = dY[i];
+            dY2 = dY[i+1];
+
+            uY1 = uY[i];
+            uY2 = uY[i+1];
+
+            gains1 = (sign(dY1) != sign(uY1)) ? (gains1 + 0.2) : (gains1 * 0.8);
+            gains2 = (sign(dY2) != sign(uY2)) ? (gains2 + 0.2) : (gains2 * 0.8);
+            gains[i]   = (gains1 < 0.01) ? 0.01 : gains1;
+            gains[i+1] = (gains2 < 0.01) ? 0.01 : gains2;
+
+            uY[i]   = momentum * uY1 - eta * gains[i] * dY1;
+            uY[i+1] = momentum * uY2 - eta * gains[i+1] * dY2;
+
+            Y[i] = Y[i] + uY[i];
+            Y[i+1] = Y[i+1] + uY[i+1];
+
+            mean_vec = _mm256_add_pd(mean_vec, _mm256_set_pd(0.0, 0.0, Y[i+1], Y[i]));
+        } 
+
+        /****zeroMean****/
+        mean_vec = _mm256_mul_pd(mean_vec, _mm256_set1_pd(1.0/double(N)));
+        mean_vec = _mm256_permute4x64_pd(mean_vec, 0b11011000);
+        mean_vec = _mm256_hadd_pd(mean_vec, mean_vec);
+        mean_vec = _mm256_permute4x64_pd(mean_vec, 0b11011000);
+
+        
+        for(i = 0; i < ND - 3; i += 4){
+            Y_vec = _mm256_load_pd(Y + i);
+            Y_vec = _mm256_sub_pd(Y_vec, mean_vec);
+            _mm256_store_pd(Y + i, Y_vec);
+        }
+        for(; i < ND; i += 2){
+            Y[i]   -= mean_vec[0];
+            Y[i+1] -= mean_vec[1];
+        }
         /****zeroMean****/
     }
 }

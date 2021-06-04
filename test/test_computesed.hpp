@@ -25,7 +25,7 @@ public:
         rands(X, N, in_dim);
     }
 
-
+    virtual double perf_test_2(const int N_){return 0.0;};
     virtual void perf_test() {
         init_perf();
         double cycles = 0.;

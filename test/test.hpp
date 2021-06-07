@@ -26,6 +26,15 @@ typedef enum {
 } kernel_t;
 
 template<typename T>
+void symmetrize(T* X, const size_t N){
+    for(size_t n = 0; n < N; ++n){
+        for(size_t m = n + 1; m < N; ++m){
+            X[m*N + n] = X[n*N + m];
+        }
+    }
+}
+
+template<typename T>
 void rands(T * m, size_t row, size_t col)
 {
     std::random_device rd;
@@ -53,6 +62,7 @@ T nrm_sqr_diff(T *x, T *y, int n) {
 class Test {
     public:
         virtual void perf_test() = 0;
+        virtual double perf_test_2(const int N_) = 0;
         virtual void validate() = 0;
         virtual void init_perf() = 0;
         virtual void init_validate() = 0;

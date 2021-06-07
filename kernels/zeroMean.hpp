@@ -393,3 +393,132 @@ namespace zeroMeanv5 {
 
     }
 }
+
+
+
+
+namespace zeroMeanv6 {
+
+    // assume that D=2 and Zen 3 microarchitecture
+    inline void zeromeanvec2_zen3(double *__restrict__ X, int N, int D){
+        
+        if (D != 2){
+            fprintf(stderr, "ERROR: Dimenion variable D must be 2");
+            return;
+        }
+        // Assumption is that D = 2
+        int nbr_el = N*D;
+        int limit = nbr_el - 23; // below you will see why 31 was chosen
+        
+        
+        // Throughput of add_pd is 2 on Sky/IceLake and 1 on Haswell, Broadwell, and Ivy Bridge
+        // Latency of 4 and 3 on Sky/IceLake and (Has/broadwell, Bridge) respectively
+        // ---> 8 and 3 accumulators respectively (my computer uses Sky hence 8)
+        // On AMD Zen 3, throughoput of ADD/SUBPD is 2 and latency is 3 so 6 accumulators for each loop which only does add/sub operations (ignoring the loads)
+        d256 m1 = _mm256_setzero_pd();
+        d256 m2 =  m1;
+        d256 m3 =  m1;
+        d256 m4 =  m1;
+        
+        d256 m5 = m1;
+        d256 m6 = m1;
+        
+        d256 temp1, temp2, temp3, temp4, temp5, temp6, temp7, temp8;
+        
+        // In one iter, read 32 values
+        int i;
+        for (i = 0; i < limit; i+=24){
+            
+            temp1 = _mm256_load_pd(X+i);
+            temp2 = _mm256_load_pd(X+i+4);
+            temp3 = _mm256_load_pd(X+i+8);
+            temp4 = _mm256_load_pd(X+i+12);
+            temp5 = _mm256_load_pd(X+i+16);
+            temp6 = _mm256_load_pd(X+i+20);
+
+            
+            
+            
+            m1 = _mm256_add_pd(m1, temp1);
+            m2 = _mm256_add_pd(m2, temp2);
+            m3 = _mm256_add_pd(m3, temp3);
+            m4 = _mm256_add_pd(m4, temp4);
+            m5 = _mm256_add_pd(m5, temp5);
+            m6 = _mm256_add_pd(m6, temp6);
+
+            
+        }
+        
+        // Finish residuals
+        double even_acc = 0;
+        double odd_acc = 0;
+        
+        // nbr_el is even as D=2 so no need to worry about i+1 going out of bounds
+        for (; i < nbr_el; i+=2){
+            even_acc += X[i];
+            odd_acc  += X[i+1];
+        }
+        
+        
+        // Add the 8 accumulators
+        d256 nvec = _mm256_set1_pd(N);
+        m1 = _mm256_add_pd(m1, m2);
+        m1 = _mm256_add_pd(m1, m3);
+        m1 = _mm256_add_pd(m1, m4);
+        m1 = _mm256_add_pd(m1, m5);
+        m1 = _mm256_add_pd(m1, m6);
+        m1 = _mm256_div_pd(m1, nvec);
+        
+        // m1 is now of the form A1 | B1 | A2 | B2 where A1+A2 gives sum of the first feature (for all observations) and B1+B2 is likewise the sum of the 2nd feature
+        
+       
+        // If we draw out the array X in memory as (a0, a1, a2, ...) and m1 as (d0, d1, d2, d3)
+        // a0  a1  a2  a3 |  a4  a5  a6  a7 | a8   a9  a10  a11 | a12
+        // d2  d3         |                 |                   |
+        // d0  d1  d2  d3 |                 |                   |
+        //         d0  d1 |  d2  d3         |                   |
+        //                |  d0  d1  d2  d3 |                   |
+        //                           d0  d1 | d2   d3           |
+        //                                  | d0   d1  d2   d3  |
+        //                                             d0   d1  |
+        // we clearly see we need a vector (0, 0, d0, d1) and (d2, d3, 0, 0)
+        
+        double arr[4];
+        
+        _mm256_store_pd(arr, m1);
+        arr[0] = arr[0]+(even_acc/N);
+        arr[1] = arr[1] + (odd_acc/N);
+        
+        // If someone has a better idea to get 0, 0, d0, d1 and d2, d3, 0, 0 please go ahead
+        temp2 = _mm256_set_pd(arr[1], arr[0], 0, 0);
+        temp3 = _mm256_set_pd(0, 0, arr[3], arr[2]);
+        temp4 = _mm256_set_pd(arr[3], arr[2], arr[1], arr[0]);
+        
+        limit =  nbr_el - 7;
+        
+        
+        for (i = 0; i < limit; i+=8){
+            temp1 =_mm256_load_pd(X+i);
+            temp1 = _mm256_sub_pd(temp1, temp4);
+            temp1 = _mm256_sub_pd(temp1, temp2);
+            temp1 = _mm256_sub_pd(temp1, temp3);
+            _mm256_store_pd(X+i, temp1);
+            
+            temp1 =_mm256_load_pd(X+i+4);
+            temp1 = _mm256_sub_pd(temp1, temp4);
+            temp1 = _mm256_sub_pd(temp1, temp2);
+            temp1 = _mm256_sub_pd(temp1, temp3);
+            _mm256_store_pd(X+i+4, temp1);
+        }
+        
+        // scalar replace
+        double r0 = arr[0], r1 = arr[1], r2 = arr[2], r3 = arr[3];
+        
+        for ( ;i < nbr_el; i+=2){
+            X[i] -= (r0 + r2);
+            X[i+1] -= (r1 + r3);
+        }
+
+        
+    }
+}

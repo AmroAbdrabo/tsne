@@ -24,12 +24,12 @@ if __name__ == "__main__":
     vi  = np.loadtxt("performance_plot_v4_2_outdim.txt", dtype=np.float64, delimiter=',')[:,1]
 
 
-    plt.plot(n, (12*n*n)/i  , 'o--', label='v1')
-    plt.plot(n, (12*(n*n + n))/ii , 'o--', label='v2 d=2')
-    plt.plot(n, (12*n*n + 3*n)/iii, 'o--', label='v2 d=x')
-    plt.plot(n, (12*(n*n + n))/iv , 'ro-', label='v3 d=2', linewidth=3.0)
-    plt.plot(n, (12*n*n + 3*n)/v  , 'o--', label='v3 d=x')
-    plt.plot(n, (12*(n*n + n))/vi , 'o--', label='v4 d=2')
+    plt.plot(n, (12*n*n)/i  , 'o--', label='Base implementation')
+    plt.plot(n, (12*(n*n + n))/ii , 'o--', label='Optimized (without AVX)')
+    #plt.plot(n, (12*n*n + 3*n)/iii, 'o--', label='v2 d=x')
+    plt.plot(n, (12*(n*n + n))/iv , 'ro-', label='AVX', linewidth=3.0)
+    #plt.plot(n, (12*n*n + 3*n)/v  , 'o--', label='v3 d=x')
+    plt.plot(n, (12*(n*n + n))/vi , 'o--', label='Strict upper triangular matrices')
 
     plt.vlines(35, ymin=0.0, ymax=2.5)
     plt.vlines(144, ymin=0.0, ymax=2.5)

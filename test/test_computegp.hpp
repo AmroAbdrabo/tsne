@@ -2,7 +2,6 @@
 
 #include "test.hpp"
 #include "kernels/computeGP.hpp"
-#include "memory/Pool.h"
 
 class Test_ComputeGP : public Test
 {
@@ -31,8 +30,48 @@ public:
     virtual void init_validate() {
         init();
     }
-    
-    virtual double perf_test_2(const int N_){return 0.0;};
+
+    virtual double perf_test_2(const int N_){
+        init_perf();
+
+        double cycles = 0.;
+        long num_runs = 100;
+        double multiplier = 1.0;
+        unsigned long long start, end;
+
+        perf_test_N = N_;
+
+        //warmup
+        do {
+            num_runs = num_runs * multiplier;
+            start = start_tsc();
+            for (size_t i = 0; i < num_runs; i++) {
+                (*func)(X, perf_test_N, perf_test_indim, P, perp);
+            }
+            end = stop_tsc(start);
+
+            cycles = (double)end;
+            multiplier = (CYCLES_REQUIRED) / (cycles);
+
+        } while (multiplier > 2);
+
+
+
+        double total_cycles = 0;
+        for (size_t j = 0; j < REP; j++) {
+            start = start_tsc();
+            for (size_t i = 0; i < num_runs; ++i) {
+                (*func)(X, perf_test_N, perf_test_indim, P, perp);
+            }
+            end = stop_tsc(start);
+
+            cycles = ((double)end) / num_runs;
+            total_cycles += cycles;
+        }
+        cycles = total_cycles / (double)REP;
+        return cycles;
+    };
+
     virtual void perf_test() {
         init_perf();
         double cycles = 0.;
@@ -54,7 +93,6 @@ public:
         } while (multiplier > 2);
 
         double total_cycles = 0;
-        memory::Pool::allocate(num_runs * N * N * sizeof(double));
         for (size_t j = 0; j < REP; j++) {
             start = start_tsc();
             for (size_t i = 0; i < num_runs; ++i) {
@@ -65,7 +103,6 @@ public:
             cycles = ((double)end) / num_runs;
             total_cycles += cycles;
         }
-        memory::Pool::freeAll();
         cycles = total_cycles / REP;
         print_perf(cycles, num_runs);
     }

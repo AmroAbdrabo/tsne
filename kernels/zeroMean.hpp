@@ -164,7 +164,7 @@ namespace zeroMeanv4 {
         d256 m7 = m1;
         d256 m8 = m1;
         
-        d256 temp1, temp2, temp3, temp4, temp5, temp6, temp7, temp8;
+        d256 temp1, temp2, temp3, temp4, temp5, temp6, temp7, temp8, temp9;
         
         // In one iter, read 32 values
         int i;
@@ -239,24 +239,47 @@ namespace zeroMeanv4 {
         temp3 = _mm256_set_pd(0, 0, arr[3], arr[2]);
         temp4 = _mm256_set_pd(arr[3], arr[2], arr[1], arr[0]);
         
-        limit =  nbr_el - 3;
-        
-        
-        for (i = 0; i < limit; i+=4){
-            temp1 =_mm256_load_pd(X+i);
-            temp1 = _mm256_sub_pd(temp1, temp4);
-            temp1 = _mm256_sub_pd(temp1, temp2);
-            temp1 = _mm256_sub_pd(temp1, temp3);
-            _mm256_store_pd(X+i, temp1);
-        }
-        
-        // scalar replace
-        double r0 = arr[0], r1 = arr[1], r2 = arr[2], r3 = arr[3];
-        
-        for ( ;i < nbr_el; i+=2){
-            X[i] -= (r0 + r2);
-            X[i+1] -= (r1 + r3);
-        }
+        limit =  nbr_el - 31;
+         
+         
+         for (i = 0; i < limit; i+=32){
+             temp1 =_mm256_load_pd(X+i);
+             temp3 =_mm256_load_pd(X+i+4);
+             temp4 =_mm256_load_pd(X+i+8);
+             temp5 =_mm256_load_pd(X+i+12);
+             temp6 =_mm256_load_pd(X+i+16);
+             temp7 =_mm256_load_pd(X+i+20);
+             temp8 =_mm256_load_pd(X+i+24);
+             temp9 =_mm256_load_pd(X+i+28);
+             
+             
+             temp1 = _mm256_sub_pd(temp1, temp2);
+             temp3 = _mm256_sub_pd(temp3, temp2);
+             temp4 = _mm256_sub_pd(temp4, temp2);
+             temp5 = _mm256_sub_pd(temp5, temp2);
+             temp6 = _mm256_sub_pd(temp6, temp2);
+             temp7 = _mm256_sub_pd(temp7, temp2);
+             temp8 = _mm256_sub_pd(temp8, temp2);
+             temp9 = _mm256_sub_pd(temp9, temp2);
+             
+             _mm256_store_pd(X+i, temp1);
+             _mm256_store_pd(X+i+4, temp3);
+             _mm256_store_pd(X+i+8, temp4);
+             _mm256_store_pd(X+i+12, temp5);
+             _mm256_store_pd(X+i+16, temp6);
+             _mm256_store_pd(X+i+20, temp7);
+             _mm256_store_pd(X+i+24, temp8);
+             _mm256_store_pd(X+i+28, temp9);
+         }
+         
+         // scalar replace
+         double r0 = arr[0], r1 = arr[1], r2 = arr[2], r3 = arr[3];
+         
+         for ( ;i < nbr_el; i+=2){
+             X[i] -= (r0 + r2);
+             X[i+1] -= (r1 + r3);
+         }
+
 
         
     }

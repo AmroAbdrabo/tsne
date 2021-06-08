@@ -3,6 +3,7 @@
 #include <sys/time.h>
 #endif
 #include <stdlib.h>
+#include <cstdlib>
 #include <stdio.h>
 #include <time.h>
 

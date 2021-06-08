@@ -1,6 +1,10 @@
 #pragma once
 
 #include "immintrin.h"
+#include <iostream>
+#include <stdio.h>
+#include <cstdlib>
+#include <stdlib.h>
 
 /**
  * Zero out the mean for each dimension

@@ -562,3 +562,135 @@ namespace zeroMeanv6 {
         
     }
 }
+
+
+namespace zeroMeanv7 {
+    // Assume that D=3 - optimized for Zen 3 microarchitecture
+    inline void zeromeanvec3_zen3(double *__restrict__ X, int N, int D){
+        
+        if (D != 3){
+            fprintf(stderr, "ERROR: Dimenion variable D must be 3");
+            return;
+        }
+        // Assumption is that D = 3
+        int nbr_el = N*D;
+        int limit = nbr_el - 23; // below you will see why 31 was chosen
+        
+        
+        d256 temp1, temp2, temp3, temp4, temp5, temp6;
+        
+        //d256 temp1, temp2, temp3, temp4, temp5, temp6, temp7, temp8;
+        d256 acc1 = _mm256_setzero_pd();
+        d256 acc2 = acc1, acc3 = acc1;  // first one stores in order, the columns 0 1 2 0, the second one 1 2 0 1 and the third one 2 0 1 2
+        
+        // In one iter, read 12 values
+        int i;
+        for (i = 0; i < limit; i+=24){ // notice also that 12  = gcd(3, 4),  4 = vec size, 3 = nbr cols --> the idea can be extended to further dimensions
+            
+            temp1 = _mm256_load_pd(X+i);
+            temp2 = _mm256_load_pd(X+i+4);
+            temp3 = _mm256_load_pd(X+i+8);
+            temp4 = _mm256_load_pd(X+i+12);
+            temp5 = _mm256_load_pd(X+i+16);
+            temp6 = _mm256_load_pd(X+i+20);
+
+            
+            acc1 = _mm256_add_pd(acc1, temp1);
+            acc2 = _mm256_add_pd(acc2, temp2);
+            acc3 = _mm256_add_pd(acc3, temp3);
+            acc1 = _mm256_add_pd(acc1, temp4);
+            acc2 = _mm256_add_pd(acc2, temp5);
+            acc3 = _mm256_add_pd(acc3, temp6);
+        }
+        
+        // Finish residuals
+        double mod0 = 0;
+        double mod1 = 0;
+        double mod2 = 0;
+        
+        // nbr_el is divisible by 3 as D=3 so no need to worry about i+1 going out of bounds
+        for (; i < nbr_el; i+=3){
+            mod0 += X[i];
+            mod1  += X[i+1];
+            mod2  += X[i+2];
+        }
+        
+        double* accs = static_cast<double*>(aligned_alloc(32, 12*sizeof(double)));
+        _mm256_store_pd(accs, acc1);
+        _mm256_store_pd(accs+4, acc2);
+        _mm256_store_pd(accs+8, acc3);
+        
+        accs[0]+= mod0;
+        accs[1] += mod1;
+        accs[2] += mod2;
+        
+        // In order to avoid unaligned memory accesses, we need vectors of the form ((0), (1), (2), (0)) and ((1), (2), (0), (1)), and ((2), (0), (1), (2))
+        // where (i) represents sum of ith column
+        // in the first pass we use the first vector, second pass the second vector, and so on rotating
+        
+        double dN = (double)N;
+        
+        double sum0 = (accs[0]+accs[3] + accs[6]+ accs[9])/dN;
+        double sum1 = (accs[1]+accs[4] + accs[7]+ accs[10])/dN;
+        double sum2 = (accs[2]+accs[5] + accs[8]+ accs[11])/dN;
+        
+        d256 v1 = _mm256_set_pd(sum0, sum2, sum1, sum0);
+        d256 v2 = _mm256_set_pd(sum1, sum0, sum2, sum1);
+        d256 v3 = _mm256_set_pd(sum2, sum1, sum0, sum2);
+        
+        int prec;
+        
+        limit = nbr_el - 23;
+        for (i = 0; i < limit; i+=24){
+            temp1 =_mm256_load_pd(X+i);
+            temp2 =_mm256_load_pd(X+i+4);
+            temp3 =_mm256_load_pd(X+i+8);
+            temp4 =_mm256_load_pd(X+i+12);
+            temp5 =_mm256_load_pd(X+i+16);
+            temp6 =_mm256_load_pd(X+i+20);
+            
+            
+            prec = i%3;
+            if (prec == 0){
+                temp1 = _mm256_sub_pd(temp1, v1);
+                temp2 = _mm256_sub_pd(temp2, v2);
+                temp3 = _mm256_sub_pd(temp3, v3);
+                temp4 = _mm256_sub_pd(temp4, v1);
+                temp5 = _mm256_sub_pd(temp5, v2);
+                temp6 = _mm256_sub_pd(temp6, v3);
+            }
+            else if (prec == 1){
+                 temp1 = _mm256_sub_pd(temp1, v2);
+                 temp2 = _mm256_sub_pd(temp2, v3);
+                 temp3 = _mm256_sub_pd(temp3, v1);
+                 temp4 = _mm256_sub_pd(temp4, v2);
+                 temp5 = _mm256_sub_pd(temp5, v3);
+                 temp6 = _mm256_sub_pd(temp6, v1);
+            }
+            else{
+                temp1 = _mm256_sub_pd(temp1, v3);
+                temp2 = _mm256_sub_pd(temp2, v1);
+                temp3 = _mm256_sub_pd(temp3, v2);
+                temp4 = _mm256_sub_pd(temp4, v3);
+                temp5 = _mm256_sub_pd(temp5, v1);
+                temp6 = _mm256_sub_pd(temp6, v2);
+            }
+            
+            _mm256_store_pd(X+i, temp1);
+            _mm256_store_pd(X+i+4, temp2);
+            _mm256_store_pd(X+i+8, temp3);
+            _mm256_store_pd(X+i+12, temp4);
+            _mm256_store_pd(X+i+16, temp5);
+            _mm256_store_pd(X+i+20, temp6);
+        }
+        
+        double sums[3] =  {sum0, sum1, sum2};
+        for ( ;i < nbr_el; ++i){
+           
+            X[i] -= sums[i%3];
+        }
+
+        
+    }
+
+}

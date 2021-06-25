@@ -1,14 +1,15 @@
 #include "test.hpp"
 #include "test_updgradient.hpp"
 #include "test_zeromean.hpp"
-#include "test_computegp.hpp"
+//#include "test_computegp.hpp"
 #include "test_computesed.hpp"
 #include "test_updgradient_zeromean.hpp"
+#include "../memory/Pool.h"
 
 /// plug in your implementation using corresponding namespaces
-using namespace computeGPv1;
+//using namespace computeGPv1;
 using namespace updateGradientv4_2_outdim;
-using namespace zeroMeanv1;
+using namespace zeroMeanv6;
 using namespace computeSEDv1;
 using namespace updateGradient_zeroMeanv7_d2;
 
@@ -28,10 +29,10 @@ int main(int argc, char** argv) {
     
     string to_test(argv[1]);
     cout << "Begin Test " << to_test << endl;
-    if(to_test == "computegp") {
-        test = new Test_ComputeGP(computeGaussianPerplexity);
-    }
-    else if(to_test == "updgradient") {
+    // if(to_test == "computegp") {
+    //     test = new Test_ComputeGP(computeGaussianPerplexity);
+    // }
+    if(to_test == "updgradient") {
         test = new Test_UpdGradient(updateGradient);
     }
     else if(to_test == "zeromean") {
@@ -50,7 +51,7 @@ int main(int argc, char** argv) {
     }
 
     const int reps = 2;
-    double total_cycles[8];
+    double total_cycles[18];
     double cycles;
     int N_;
     int j = 0;
@@ -67,9 +68,9 @@ int main(int argc, char** argv) {
     
     //write into file
     FILE *pFile;
-    pFile = fopen("updGr_zM_v7_d2.txt","w");
+    pFile = fopen("plots/zMv6.txt","w");
     N_ = 16;
-    for(int i = 0; i < 8; ++i){
+    for(int i = 0; i < 18; ++i){
         fprintf(pFile, "%i,%e\n", N_, total_cycles[i]);
         N_ *= 2;
     }

@@ -18,50 +18,6 @@
   <isa type="string">avx2</isa>
  </rdmgr>
  <All_Configurations-All_Platforms>
-  <searchDirs>
-   <searchCategory>
-    <category type="u8_t">1</category>
-    <searchDirectory>
-     <name type="string">/home/noah/team04/build</name>
-     <recursive type="bool">false</recursive>
-     <priority type="bool">true</priority>
-    </searchDirectory>
-   </searchCategory>
-   <searchCategory>
-    <category type="u8_t">2</category>
-    <searchDirectory>
-     <name type="string">/home/noah/team04/build</name>
-     <recursive type="bool">false</recursive>
-     <priority type="bool">true</priority>
-    </searchDirectory>
-   </searchCategory>
-   <searchCategory>
-    <category type="u8_t">3</category>
-    <searchDirectory>
-     <name type="string">/home/noah/team04</name>
-     <recursive type="bool">false</recursive>
-     <priority type="bool">true</priority>
-    </searchDirectory>
-    <searchDirectory>
-     <name type="string">/home/noah/team04/kernels</name>
-     <recursive type="bool">false</recursive>
-     <priority type="bool">true</priority>
-    </searchDirectory>
-    <searchDirectory>
-     <name type="string">/</name>
-     <recursive type="bool">false</recursive>
-     <priority type="bool">true</priority>
-    </searchDirectory>
-    <searchDirectory>
-     <name type="string">/home/noah/team04/test</name>
-     <recursive type="bool">false</recursive>
-     <priority type="bool">true</priority>
-    </searchDirectory>
-   </searchCategory>
-   <searchCategory>
-    <category type="u8_t">4</category>
-   </searchCategory>
-  </searchDirs>
   <target_settings>
    <selected_workload>
     <localhost type="string">launch</localhost>
@@ -430,6 +386,55 @@
     </launch>
    </localhost>
   </analysis_type_settings>
+  <searchDirs>
+   <searchCategory>
+    <category type="u8_t">1</category>
+    <searchDirectory>
+     <name type="string">/home/noah/team04/build</name>
+     <recursive type="bool">false</recursive>
+     <priority type="bool">true</priority>
+    </searchDirectory>
+   </searchCategory>
+   <searchCategory>
+    <category type="u8_t">2</category>
+    <searchDirectory>
+     <name type="string">/home/noah/team04/build</name>
+     <recursive type="bool">false</recursive>
+     <priority type="bool">true</priority>
+    </searchDirectory>
+   </searchCategory>
+   <searchCategory>
+    <category type="u8_t">3</category>
+    <searchDirectory>
+     <name type="string">/home/noah/team04</name>
+     <recursive type="bool">false</recursive>
+     <priority type="bool">true</priority>
+    </searchDirectory>
+    <searchDirectory>
+     <name type="string">/home/noah/team04/kernels</name>
+     <recursive type="bool">false</recursive>
+     <priority type="bool">true</priority>
+    </searchDirectory>
+    <searchDirectory>
+     <name type="string">/</name>
+     <recursive type="bool">false</recursive>
+     <priority type="bool">true</priority>
+    </searchDirectory>
+    <searchDirectory>
+     <name type="string">/home/noah/team04/test</name>
+     <recursive type="bool">false</recursive>
+     <priority type="bool">true</priority>
+    </searchDirectory>
+    <searchDirectory>
+     <name type="string">/home/noah/team04/vector-class</name>
+     <recursive type="bool">false</recursive>
+     <priority type="bool">false</priority>
+    </searchDirectory>
+   </searchCategory>
+   <searchCategory>
+    <category type="u8_t">4</category>
+   </searchCategory>
+  </searchDirs>
  </All_Configurations-All_Platforms>
  <contextValues type="bag"/>
 </root>

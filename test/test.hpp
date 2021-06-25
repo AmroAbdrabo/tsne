@@ -14,7 +14,7 @@ constexpr int CYCLES_REQUIRED = (1*1e8);
 constexpr int REP = 50;
 constexpr double EPS = (1e-3);
 
-constexpr int N = 2048;
+constexpr int N = 2<<19;
 constexpr int out_dim = 2;
 constexpr int in_dim = 128;
 constexpr double perp = 128;

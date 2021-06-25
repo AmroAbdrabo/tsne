@@ -177,6 +177,8 @@ public:
         print_error(error);
     }
 
+    virtual double perf_test_2(const int N_) { /* no impl */ return -1; }
+
     virtual void print_perf(double cycles, long num_runs) {
         cout << "\nPerformance Test Report\n";
         cout << "Number of samples = \t" << perf_test_N << endl;

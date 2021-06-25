@@ -3,14 +3,14 @@
 #include "test_zeromean.hpp"
 #include "test_computegp.hpp"
 #include "test_computesed.hpp"
+#include "test_updgradient_zeromean.hpp"
 
 /// plug in your implementation using corresponding namespaces
-using namespace computeGPv1;
-using namespace updateGradientv3;
+using namespace computeGPv3;
+using namespace updateGradientv3_2_outdim;
 using namespace zeroMeanv1;
- using namespace computeSEDv2d2rubuf;
-// using namespace computeSEDv2d2buf;
- //using namespace computeSEDv1;
+using namespace computeSEDv1;
+using namespace updateGradient_zeroMeanv5_d2;
 
 void usage() {
     cout << "[Usage] ./test <kernel_name1> <kernel_name2> ...\n";
@@ -24,7 +24,7 @@ int main(int argc, char** argv) {
         exit(1);
     }
     Test* test = nullptr;
-    
+
     for(int i = 1; i < argc; i++) {
         string to_test(argv[i]);
         cout << "Begin Test " << to_test << endl;
@@ -52,6 +52,9 @@ int main(int argc, char** argv) {
             //static_cast<Test_ComputeSED*>(test)->sweep_input_size();
             static_cast<Test_ComputeSED*>(test)->sweep(func_to_test, names, size_to_test);
             //static_cast<Test_ComputeSED*>(test)->sweep_block_size();
+        }
+        else if(to_test == "updgradient_zeromean"){
+            test = new Test_UpdGradient_ZeroMean(updateGradient_zeroMean);
         }
         else {
             cout << "Invalid kernel name!\n";

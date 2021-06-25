@@ -1,13 +1,12 @@
 #pragma once
 #include "computeSED.hpp"
-#include "../vector-class/vectorclass.h"
-#include "../vector-class/vectormath_exp.h"
+#include "vector-class/vectorclass.h"
+#include "vector-class/vectormath_exp.h"
 #include <cfloat>
 #include <stdio.h>
 #include <math.h>
 #include <iostream>
 #include <stdlib.h>
-#include "../memory/Pool.h"
 
 /**
  * compute variance for each input data point, calculate pairwise distances, and symmetrize the matrix
@@ -25,7 +24,7 @@ namespace computeGPv1 {
     inline void computeGaussianPerplexity(const double* X, const size_t N, const unsigned int in_dim, double* P, const double perp) {
         // Compute the squared Euclidean distance matrix
 
-        double* DD = (double*) memory::Pool::getMemory(N * N * sizeof(double));
+        double* DD = (double*) malloc(N * N * sizeof(double));
         if(DD == NULL) { printf("Memory allocation failed!\n"); exit(1); }
         computeSEDv1::computeSquaredEuclideanDistance(X, N, in_dim, DD);
 
@@ -101,7 +100,7 @@ namespace computeGPv1 {
         }
 
         // Clean up memory
-        // free(DD); DD = NULL;
+        free(DD); DD = NULL;
 
         // Symmetrize input similarities
         nN = 0;
@@ -331,7 +330,7 @@ namespace computeGPv3 {
         }
 
         // Clean up memory
-        free(DD); DD = NULL;
+        // free(DD); DD = NULL;
 
         // Symmetrize input similarities
         // TODO: Any optimizations here?
@@ -552,8 +551,6 @@ namespace computeGPv4 {
         }
     }
 }
-
-
 // vectorized version
 namespace computeGPv5 {
 

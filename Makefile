@@ -1,5 +1,5 @@
-CXX=g++
-CXXFLAGS=-O3 -march=native -mtune=native -mavx2 -mfma -ffast-math -fno-tree-vectorize -std=c++17 -g
+CXX=g++-10
+CXXFLAGS=-O3 -mavx2  -march=native -mtune=native -mfma -mtune=native -fno-tree-vectorize -std=c++17
 INC=-I.
 
 tsne: init main.cpp
@@ -18,4 +18,3 @@ init:
 	mkdir -p build/
 
 .PHONY: init
-

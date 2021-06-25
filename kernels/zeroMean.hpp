@@ -290,6 +290,7 @@ namespace zeroMeanv4 {
 
 }
 
+// Blocked version
 namespace zeroMeanv5 {
     inline void zeroMean(double *__restrict__ X, int N, int D){ // zeromeanblocked previously
 
@@ -387,9 +388,9 @@ namespace zeroMeanv5 {
 
         // Subtract data mean
         nD = 0;
-
+        limit1 = N-5;
         // For this computation some cache lookups can be spared by unrolling n by 4
-        for(n = 0; n < limit1; n+=4) {
+        for(n = 0; n < limit1; n+=6) {
             for(int d = 0; d < D; d++) {
                 double temp = mean[d];
                 int center = nD+d;
@@ -397,8 +398,10 @@ namespace zeroMeanv5 {
                 X[center + D] -= temp;
                 X[center + 2*D] -= temp;
                 X[center + 3*D] -= temp;
+                X[center + 4*D] -= temp;
+                X[center + 5*D] -= temp;
             }
-            nD += (4*D);
+            nD += (6*D);
         }
 
         // residual
@@ -416,7 +419,7 @@ namespace zeroMeanv5 {
 
 
 
-
+// Vectorized for D=2
 namespace zeroMeanv6 {
 
     // assume that D=2 and Zen 3 microarchitecture
@@ -556,7 +559,7 @@ namespace zeroMeanv6 {
     }
 }
 
-
+// Vectorized for D=3
 namespace zeroMeanv7 {
     // Assume that D=3 - optimized for Zen 3 microarchitecture
     inline void zeroMean(double *__restrict__ X, int N, int D){   // zeromeanvec3_zen3

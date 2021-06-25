@@ -7,3 +7,5 @@ cachegrind*
 *.o
 profile.dSYM/
 profile
+TSNE/
+.ipynb_checkpoints/

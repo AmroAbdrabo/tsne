@@ -13,7 +13,7 @@
 
 using namespace computeGPv1;
 using namespace updateGradientv3_2_outdim;
-using namespace zeroMeanv1;
+using namespace zeroMeanv6;
 using namespace updateGradient_zeroMeanv5_d2;
 
 int main(int argc, char** argv) {

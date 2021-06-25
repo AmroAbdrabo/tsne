@@ -5,6 +5,7 @@
 #include <random>
 #include <iostream>
 #include <cstring>
+#include <iomanip>
 using namespace std;
 
 #include "common/tsc_x86.h"
@@ -57,6 +58,10 @@ T nrm_sqr_diff(T *x, T *y, int n) {
     }
     
     return nrm_sqr;
+}
+
+template<typename T> void printElement(T t) {
+    std::cout << std::left << std::setw(20) << std::setfill(' ') << t;
 }
 
 class Test {

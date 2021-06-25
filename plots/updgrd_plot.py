@@ -35,22 +35,24 @@ if __name__ == "__main__":
     plt.vlines(144, ymin=0.0, ymax=2.5)
     plt.vlines(1153, ymin=0.0, ymax=2.5)
 
-    shift = 50
-    plt.text(35 - shift, 0.1, 'L1')
-    plt.text(144 - shift, 0.1, 'L2')
-    plt.text(1153 - shift, 0.1, 'L3')
+    shift = 1.4
+    plt.text(35 / shift, 0.1, 'L1')
+    plt.text(144 / shift, 0.1, 'L2')
+    plt.text(1153 / shift, 0.1, 'L3')
 
-    plt.xticks(n[1:])
+    
 
     plt.xlabel('Input size N')
     plt.ylabel("Performance [flops/cycle]", rotation=0)
 
     ax.yaxis.set_label_coords(0.05,1.01)
     ax.xaxis.grid()
+    ax.set_xscale('log', basex=2)
 
     plt.title('updateGradient kernel on Ryzen 9 5950X 3.4GHz', loc='left', pad=25, fontweight="bold")
     
-    plt.legend()
+    #plt.legend()
+    ax.legend().set_visible(False)
     plt.plot()
     plt.show()
     #plt.savefig(sys.argv[2])

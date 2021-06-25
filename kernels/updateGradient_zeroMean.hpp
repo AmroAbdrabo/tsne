@@ -470,7 +470,7 @@ namespace updateGradient_zeroMeanv3_d2 {
         } 
 
         /****zeroMean****/
-        zeroMeanv4::zeroMean(Y, N, out_dim);
+        zeroMeanv6::zeroMean(Y, N, out_dim);
         /****zeroMean****/
     }
 }

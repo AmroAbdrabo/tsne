@@ -5,3 +5,7 @@ output.txt
 cachegrind*
 *.s
 *.o
+profile.dSYM/
+profile
+TSNE/
+.ipynb_checkpoints/

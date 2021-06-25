@@ -13,11 +13,11 @@
 
 using namespace computeGPv1;
 using namespace updateGradientv3_2_outdim;
-using namespace zeroMeanv1;
+using namespace zeroMeanv6;
 using namespace updateGradient_zeroMeanv5_d2;
 
 int main(int argc, char** argv) {
-    memory::Pool::allocate((in_dim + 4 * out_dim + 3*N) * 1.1 * N * sizeof(double));
+    memory::Pool::allocate((in_dim + 4 * out_dim + 2*N) * 1.1 * N * sizeof(double));
 
     double* X     = (double*) memory::Pool::getMemory(N * in_dim * sizeof(double));
     double* Y     = (double*) memory::Pool::getMemory(N * out_dim * sizeof(double));

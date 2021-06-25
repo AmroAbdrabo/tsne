@@ -6,6 +6,8 @@
 #include <cstdlib>
 #include <stdlib.h>
 
+typedef __m256d d256;
+
 /**
  * Zero out the mean for each dimension
  *
@@ -86,7 +88,7 @@ namespace zeroMeanv3 { // AVX2
 
     typedef __m256d d256;
 
-    inline void void zeroMean(double *__restrict__ X, int N, int D){ // was initally named zeromeanvec
+    inline void zeroMean(double *__restrict__ X, int N, int D){ // was initally named zeromeanvec
 
         if (D%8 != 0){
             fprintf(stderr, "ERROR: D is not divisible by 8, consider using zeromeanblocked instead");

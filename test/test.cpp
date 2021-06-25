@@ -6,8 +6,8 @@
 #include "test_updgradient_zeromean.hpp"
 
 /// plug in your implementation using corresponding namespaces
-using namespace computeGPv1;
-using namespace updateGradientv1;
+using namespace computeGPv3;
+using namespace updateGradientv3;
 using namespace zeroMeanv1;
 using namespace computeSEDv1;
 using namespace updateGradient_zeroMeanv5_d2;
@@ -24,7 +24,7 @@ int main(int argc, char** argv) {
         exit(1);
     }
     Test* test = nullptr;
-    
+
     for(int i = 1; i < argc; i++) {
         string to_test(argv[i]);
         cout << "Begin Test " << to_test << endl;
